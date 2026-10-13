@@ -1,6 +1,6 @@
-# fly.toml app configuration file generated for chaos--o4n5w on 2026-10-13T20:03:19Z
+# fly.toml app configuration file generated for chaos--o4n5w on 2026-10-13T20:43:02Z
 #
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+# See https://docs.fly.io/reference/configuration for information about how to use this file.
 #
 
 app = 'chaos--o4n5w'
@@ -14,7 +14,7 @@ console_command = '/code/manage.py shell'
 
 [http_service]
   internal_port = 8000
-  force_https = true
+  force_https = false
   auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
