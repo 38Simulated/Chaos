@@ -1,0 +1,18 @@
+# Original game files are copyrighted - keep them out of version control
+*.tap
+*.tzx
+*.z80
+*.sna
+*.zip
+re/build/
+__pycache__/
+*.pyc
+db.sqlite3
+node_modules/
+.venv/
+# derived from the copyrighted game code
+re/chaos.skool
+re/build/
+re/*.bin
+# game image generated from your own tape by tools/build_assets.py
+server/game/static/game/chaos.bin
