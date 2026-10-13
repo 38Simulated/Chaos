@@ -64,6 +64,7 @@ export class Chaos {
     this.setupSeat = HOST;            // controller during setup screens
     this.onEvent = opts.onEvent || (() => {});
     this.frameCount = 0;
+    this.fastCount = 0;
   }
 
   // ---- memory access ---------------------------------------------------------
@@ -91,7 +92,11 @@ export class Chaos {
     for (const f of w) f();
   }
   halt(n = 1) {
-    if (this.fast) { return Promise.resolve(); }
+    if (this.fast) {
+      // let the browser breathe while replaying a long event log
+      if ((++this.fastCount & 255) === 0) return new Promise(res => setTimeout(res, 0));
+      return Promise.resolve();
+    }
     return new Promise(res => {
       const step = () => { if (--n <= 0) res(); else this.haltWaiters.push(step); };
       this.haltWaiters.push(step);

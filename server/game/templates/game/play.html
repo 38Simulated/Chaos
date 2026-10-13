@@ -1,0 +1,46 @@
+{% extends "game/base.html" %}
+{% load static %}
+{% block title %}Chaos &middot; {{ game.code }}{% endblock %}
+{% block body %}
+<div class="play">
+  <section class="screen-wrap">
+    <canvas id="screen" width="320" height="240" tabindex="0"></canvas>
+    <div id="overlay" class="overlay"></div>
+  </section>
+  <aside class="side">
+    <div class="box">
+      <div class="row"><span class="label">Game</span> <strong id="code">{{ game.code }}</strong>
+        <button id="copy" class="small" title="Copy invite link">Copy link</button></div>
+      <div id="status" class="status">Connecting&hellip;</div>
+    </div>
+    <div class="box">
+      <h3>Wizards</h3>
+      <ol id="seats" class="seats"></ol>
+      <button id="start" class="hidden">Start game</button>
+      <p id="lobby-hint" class="hint hidden">When everyone has joined, the host starts the game. The host answers
+        for empty seats (make them computer wizards with <kbd>Y</kbd>).</p>
+    </div>
+    <div class="box keys">
+      <h3>Keys</h3>
+      <p><kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> <kbd>A</kbd> <kbd>D</kbd> <kbd>Z</kbd><kbd>X</kbd><kbd>C</kbd> move cursor
+        &middot; <kbd>S</kbd> select &middot; <kbd>K</kbd> cancel &middot; <kbd>I</kbd> info
+        &middot; <kbd>1</kbd>&ndash;<kbd>8</kbd> show a wizard's creations &middot; <kbd>0</kbd> end turn</p>
+      <label class="check"><input type="checkbox" id="sound" checked> Sound</label>
+    </div>
+    <div class="box chat">
+      <h3>Chat</h3>
+      <div id="chatlog" class="chatlog"></div>
+      <form id="chatform"><input id="chatinput" maxlength="200" placeholder="Say something&hellip;" autocomplete="off"></form>
+    </div>
+  </aside>
+</div>
+<script>
+  window.CHAOS = {
+    code: "{{ game.code }}",
+    seat: {{ player.seat }},
+    name: "{{ player.name|escapejs }}",
+    asset: "{% static 'game/chaos.bin' %}",
+  };
+</script>
+<script type="module" src="{% static 'game/js/main.js' %}"></script>
+{% endblock %}

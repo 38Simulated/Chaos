@@ -16,3 +16,6 @@ re/build/
 re/*.bin
 # game image generated from your own tape by tools/build_assets.py
 server/game/static/game/chaos.bin
+server/db.sqlite3
+server/staticfiles/
+re/daphne.log

@@ -44,6 +44,13 @@ export class InputStream {
 
   consume() {
     const ev = this.queue.shift();
+    if (ev.type === 'takeover') {
+      // the host answers for this seat from now on
+      this.seats.set(ev.seat, false);
+      this.heldSet(ev.seat).clear();
+      if (this.queue.length === 0 && this.replaying) this.finishReplay();
+      return ev;
+    }
     const s = this.heldSet(ev.seat);
     if (ev.type === 'down') s.add(ev.code);
     else if (ev.type === 'up') s.delete(ev.code);

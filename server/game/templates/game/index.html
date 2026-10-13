@@ -1,0 +1,26 @@
+{% extends "game/base.html" %}
+{% block body %}
+<main class="lobby">
+  <h1 class="title">CHAOS</h1>
+  <p class="subtitle">The Battle of Wizards &mdash; online</p>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <div class="cards">
+    {% if not join_code %}
+    <form class="card" method="post" action="{% url 'create' %}">
+      {% csrf_token %}
+      <h2>New game</h2>
+      <label>Your name <input name="name" maxlength="20" required autofocus></label>
+      <button type="submit">Create game</button>
+      <p class="hint">You will get a code to share. Up to 8 wizards; empty seats can be computer wizards.</p>
+    </form>
+    {% endif %}
+    <form class="card" method="post" action="{% url 'join' %}">
+      {% csrf_token %}
+      <h2>Join a game</h2>
+      <label>Your name <input name="name" maxlength="20" required {% if join_code %}autofocus{% endif %}></label>
+      <label>Game code <input name="code" maxlength="8" value="{{ join_code|default:'' }}" required class="code"></label>
+      <button type="submit">Join</button>
+    </form>
+  </div>
+</main>
+{% endblock %}
