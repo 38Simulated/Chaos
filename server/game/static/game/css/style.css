@@ -52,7 +52,8 @@ kbd {
   display: flex; flex-wrap: wrap; gap: 1rem; padding: 1rem; justify-content: center; align-items: flex-start;
   min-height: 100vh;
 }
-.screen-wrap { position: relative; flex: 1 1 640px; max-width: 960px; }
+.screen-col { flex: 1 1 640px; max-width: 960px; min-width: 0; }
+.screen-wrap { position: relative; }
 #screen {
   width: 100%; height: auto; aspect-ratio: 320 / 240; image-rendering: pixelated;
   image-rendering: crisp-edges; display: block; background: #000; outline: none;
@@ -88,6 +89,27 @@ kbd {
 .seats .tag { margin-left: auto; font-size: .75rem; color: var(--muted); }
 .seats .turn { color: var(--accent); }
 .keys p { margin: 0 0 .5rem; color: var(--muted); font-size: .85rem; line-height: 1.9; }
+.pad-check { margin-bottom: .5rem; }
+/* on-screen keys: they press the same Spectrum keys as the keyboard */
+.pad {
+  display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .6rem; user-select: none; -webkit-user-select: none;
+  touch-action: manipulation; -webkit-touch-callout: none;
+}
+.pad button {
+  min-height: 2.9rem; padding: .2rem; border-color: var(--line); background: var(--panel); color: var(--text);
+  font-size: .95rem; line-height: 1.1; touch-action: manipulation;
+}
+.pad button:hover { background: var(--panel); color: var(--text); }
+.pad button.pressed, .pad button.on { background: var(--accent); border-color: var(--accent); color: #000; }
+.pad button small { display: block; font-size: .65rem; color: var(--muted); }
+.pad button.pressed small, .pad button.on small { color: #000; }
+.pad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .35rem; flex: 1 1 10rem; }
+.pad .dpad button { font-size: 1.3rem; }
+.pad .dpad .select { font-size: .85rem; border-color: var(--accent); color: var(--accent); }
+.pad-row { display: grid; gap: .35rem; flex: 1 1 100%; }
+.pad .digits { grid-template-columns: repeat(10, 1fr); }
+.pad .letters { grid-template-columns: repeat(7, 1fr); }
+.pad .letters .wide { grid-column: span 2; }
 .check { display: flex; gap: .4rem; align-items: center; color: var(--muted); font-size: .9rem; }
 .check input { width: auto; }
 .chatlog { height: 140px; overflow-y: auto; font-size: .85rem; margin-bottom: .5rem; }
