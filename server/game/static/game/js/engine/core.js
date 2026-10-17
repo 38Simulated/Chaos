@@ -63,6 +63,9 @@ export class Chaos {
     this.haltWaiters = [];
     this.setupSeat = HOST;            // controller during setup screens
     this.onEvent = opts.onEvent || (() => {});
+    this.rules = opts.rules || {};    // custom rules (rules.js); none = the original game
+    this.rangeHint = null;            // squares to highlight (display only), or null
+    this.sharedRolls = null;          // the stat rolls every wizard gets (rules.stats 'equal')
     this.frameCount = 0;
     this.fastCount = 0;
     this.tOwed = 0;                   // T-states run since the last wait, not yet waited for

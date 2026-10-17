@@ -116,7 +116,7 @@ export const SetupMixin = {
 
     // main round loop ($8E55)
     m[V.ROUND] = 0;
-    const total = u8(m[V.NWIZ] * 2 + 0x0F);
+    const total = this.rules.turns || u8(m[V.NWIZ] * 2 + 0x0F);
     let rounds = total;
     let won = false;
     while (rounds-- > 0) {
@@ -257,21 +257,32 @@ export const SetupMixin = {
     const sra = v => (s8(v) >> 1) & 0xFF;
     this.r_8300();
     let hl = this.rw(0x89AA) + 0x0D;
-    m[hl] = u8(sra(this.r_904B()) + 1 + sra(bonus));          // combat
+    // the stat rolls, in the original's order; a stats rule replaces them and
+    // drops the computer level's bonus
+    let rolls = [this.r_904B(), this.r_904B(), this.r_904B(), this.r_904B()];
+    let b = bonus;
+    if (this.statsRuleApplies()) {
+      if (!this.sharedRolls) this.sharedRolls = rolls;
+      rolls = this.statRolls();
+      b = 0;
+    }
+    m[hl] = u8(sra(rolls[0]) + 1 + sra(b));                   // combat
     m[hl + 1] = 0;                                              // ranged combat
     m[hl + 2] = 0;                                              // range
-    m[hl + 3] = u8(sra(this.r_904B()) + 1 + sra(bonus));      // defence
+    m[hl + 3] = u8(sra(rolls[1]) + 1 + sra(b));               // defence
     m[hl + 4] = 1;                                              // movement
-    m[hl + 5] = u8(sra(this.r_904B()) + 3 + sra(sra(bonus)));  // manoeuvre
-    m[hl + 6] = u8(sra(sra(this.r_904B())) + 6);              // magic resistance
+    m[hl + 5] = u8(sra(rolls[2]) + 3 + sra(sra(b)));          // manoeuvre
+    m[hl + 6] = u8(sra(sra(rolls[3])) + 6);                   // magic resistance
     let n = u8(sra(this.r_904B()) + 0x0B + bonus);
     if (P(n, 0x15)) n = 0x14;
+    if (this.rules.spells) n = this.rules.spells;
     m[0x904A] = n;
     m[hl + 7] = n;                                              // spells
     m[hl + 8] = 0;                                              // ability
     m[V.SCRATCH] = u8(5 - sra(bonus));
     const e = this.r_904B();
     if (M(m[V.SCRATCH], e)) m[hl + 8] = sra(sra(this.r_904B()));
+    if (this.rules.ability != null) m[hl + 8] = this.rules.ability;
     // spell list: entry 0 is always Disbelieve
     this.r_92AA();
     let lp = this.rw(V.LISTPTR) - 1;
@@ -281,7 +292,9 @@ export const SetupMixin = {
     this.ww(V.CD86, 0xD3F2);
     for (let i = 0; i < n; i++) {
       let a;
-      do { a = this.rndByte() & 0x3F; } while (a < 2 || a >= 0x42);
+      // 2-63: Turmoil (64, 65) only comes from Magic Wood, unless a rule allows it
+      const mask = this.rules.turmoil ? 0x7F : 0x3F;
+      do { a = this.rndByte() & mask; } while (a < 2 || a >= 0x42);
       m[V.SPELL] = a;
       this.ww(V.CD86, this.rw(V.CD86) + 1);
       const ix = this.r_92F9();

@@ -5,8 +5,9 @@ import { SpellsMixin } from './spells.js';
 import { MovementMixin } from './movement.js';
 import { UiMixin } from './ui.js';
 import { AiMixin } from './ai.js';
+import { RulesMixin } from './rules.js';
 
-Object.assign(Chaos.prototype, SetupMixin, SpellsMixin, MovementMixin, UiMixin, AiMixin);
+Object.assign(Chaos.prototype, SetupMixin, SpellsMixin, MovementMixin, UiMixin, AiMixin, RulesMixin);
 
 // Play one game. The original starts the next game straight after the
 // result screen (CALL $7D00 in a loop); online, a finished room stays

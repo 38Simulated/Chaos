@@ -164,6 +164,7 @@ export class Renderer {
     canvas.height = 192 + 2 * this.bh;
     this.img = this.ctx.createImageData(canvas.width, canvas.height);
     this.flashFrame = 0;
+    this.hint = null;                     // () => 160-square mask to highlight, or null
   }
 
   frame() {
@@ -195,6 +196,21 @@ export class Renderer {
       }
     }
     this.ctx.putImageData(this.img, 0, 0);
+    this.drawHint();
+  }
+
+  // Tint the board squares in the mask (custom rule: range indicators). Square
+  // i is at character row 2*(i >> 4) + 1, column 2*(i & 15) + 1.
+  drawHint() {
+    const mask = this.hint && this.hint();
+    if (!mask) return;
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.28)';
+    for (let i = 0; i < 160; i++) {
+      if (!mask[i]) continue;
+      const x = this.bw + ((i & 0x0F) * 2 + 1) * 8, y = this.bh + ((i >> 4) * 2 + 1) * 8;
+      ctx.fillRect(x + 1, y + 1, 14, 14);
+    }
   }
 }
 

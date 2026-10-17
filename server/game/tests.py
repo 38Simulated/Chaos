@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from chaos_site.asgi import application
 
+from . import rules
 from .models import Event, Game, Player
 
 
@@ -188,6 +189,49 @@ class ReplayTests(TestCase):
         client.post('/new/', {'name': 'Host', 'public_replay': 'on'})
         public = Game.objects.latest('created')
         self.assertEqual((private.public_replay, public.public_replay), (False, True))
+
+
+class CustomRulesTests(TestCase):
+    FORM = {'name': 'Host', 'custom': '1', 'turns': '30', 'next_key': 'on', 'ranges': 'on',
+            'turmoil': 'on', 'ability': '0', 'spells': '14', 'stats': 'max', 'stats_for': 'computer'}
+
+    def test_parse_keeps_only_valid_changes(self):
+        self.assertEqual(rules.parse({'turns': '', 'ability': '', 'spells': '', 'stats': ''}), {})
+        self.assertEqual(rules.parse(self.FORM), {
+            'turns': 30, 'nextKey': True, 'ranges': True, 'turmoil': True, 'ability': 0,
+            'spells': 14, 'stats': 'max', 'statsFor': 'computer'})
+        bad = {'turns': '4', 'ability': '4', 'spells': '21', 'stats': 'huge', 'stats_for': 'all'}
+        self.assertEqual(rules.parse(bad), {})
+        self.assertEqual(rules.parse({'turns': 'x', 'stats': 'equal', 'stats_for': 'nobody'}),
+                         {'stats': 'equal', 'statsFor': 'all'})
+
+    def test_normal_games_have_no_rules(self):
+        client = Client()
+        game = create_game(client)
+        self.assertEqual(game.rules, {})
+        page = client.get(f'/g/{game.code}/')
+        self.assertNotContains(page, 'Custom rules')
+        self.assertContains(page, '<script id="rules" type="application/json">{}</script>', html=True)
+
+    def test_custom_game_keeps_its_rules_for_players_watchers_and_replays(self):
+        self.assertContains(self.client.get('/new/custom/'), 'name="stats_for"')
+        host = Client()
+        host.post('/new/', dict(self.FORM, public_watch='on'))
+        game = Game.objects.latest('created')
+        self.assertEqual(game.rules['turns'], 30)
+        for page in (host.get(f'/g/{game.code}/'), Client().get(f'/w/{game.watch_id}/')):
+            self.assertContains(page, 'Custom rules')
+            self.assertContains(page, '30 turns')
+            self.assertContains(page, 'Computer wizards get the best stats')
+            self.assertContains(page, '"nextKey": true')
+        Game.objects.filter(pk=game.pk).update(status=Game.FINISHED)
+        self.assertEqual(host.get(f'/g/{game.code}/replay.json').json()['rules'], game.rules)
+        self.assertContains(host.get(f'/g/{game.code}/replay/'), 'Every wizard has ability 0')
+
+    def test_taken_name_goes_back_to_the_custom_form(self):
+        User.objects.create_user('merlin', password='wand-of-oak-42')
+        page = self.client.post('/new/', dict(self.FORM, name='merlin'))
+        self.assertTrue(page.url.startswith('/new/custom/?error='))
 
 
 class AccountTests(TestCase):
@@ -582,7 +626,8 @@ class SearchEngineTests(TestCase):
         Game.objects.filter(pk=game.pk).update(public_watch=True)
         for client, path in ((host, f'/g/{game.code}/'), (Client(), f'/g/{game.code}/'),
                              (Client(), f'/w/{game.watch_id}/'), (Client(), '/accounts/login/'),
-                             (Client(), '/accounts/signup/'), (Client(), '/?error=x')):
+                             (Client(), '/accounts/signup/'), (Client(), '/?error=x'),
+                             (Client(), '/new/custom/')):
             page = client.get(path)
             self.assertContains(page, self.NOINDEX, msg_prefix=path)
             self.assertNotContains(page, 'rel="canonical"', msg_prefix=path)

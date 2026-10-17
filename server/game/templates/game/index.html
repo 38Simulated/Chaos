@@ -28,7 +28,9 @@
       <label class="check"><input type="checkbox" name="public_replay"> Anyone with the link can watch the replay</label>
       <label class="check"><input type="checkbox" name="public_watch"> Anyone can watch it live (listed below)</label>
       <button type="submit">Create game</button>
-      <p class="hint">You will get a code to share. Up to 8 wizards; empty seats can be computer wizards.</p>
+      <a class="button" href="{% url 'custom' %}">Custom game&hellip;</a>
+      <p class="hint">You will get a code to share. Up to 8 wizards; empty seats can be computer wizards.
+        A custom game lets you change some of the rules.</p>
     </form>
     {% endif %}
     <form class="card" method="post" action="{% url 'join' %}">

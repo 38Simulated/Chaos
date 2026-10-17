@@ -20,6 +20,11 @@ button {
 }
 button:hover { background: var(--accent); color: #000; }
 button.small { padding: .1rem .5rem; font-size: .8rem; }
+a.button {
+  border: 1px solid var(--accent); color: var(--accent); padding: .45rem 1rem; border-radius: 4px;
+  text-align: center; text-decoration: none;
+}
+a.button:hover { background: var(--accent); color: #000; }
 input {
   font: inherit; width: 100%; padding: .45rem .6rem; background: #0b0b0f; color: var(--text);
   border: 1px solid var(--line); border-radius: 4px;
@@ -116,6 +121,15 @@ kbd {
 .chatlog .who { color: var(--cyan); }
 .chatlog .watcher { color: var(--muted); }
 #chatform { display: flex; flex-direction: column; gap: .4rem; }
+.rules { margin-top: .5rem; font-size: .85rem; }
+.rules ul { margin: .2rem 0 0; padding-left: 1.1rem; color: var(--text); }
+/* custom game page */
+.card.custom { max-width: 460px; }
+.card.custom h3 { margin: .5rem 0 0; font-size: .95rem; color: var(--cyan); }
+.card.custom select {
+  font: inherit; padding: .4rem .5rem; background: #0b0b0f; color: var(--text);
+  border: 1px solid var(--line); border-radius: 4px;
+}
 #chatform .hint { margin: 0; }
 
 /* accounts */

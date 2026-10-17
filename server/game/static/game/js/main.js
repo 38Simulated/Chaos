@@ -215,9 +215,10 @@ function startEngine(seed, human, events) {
   input.onNeed = who => updateTurn(who);
   // the engine may already be waiting on that seat, so redraw the turn too
   input.onTakeover = () => { renderSeats(); updateTurn(input.waitingFor); reportState(); };
-  engine = new Chaos(gameImage(), { input, beeper, seed, onEvent: onEngineEvent });
+  engine = new Chaos(gameImage(), { input, beeper, seed, rules: cfg.rules, onEvent: onEngineEvent });
   input.engine = engine;
   renderer = new Renderer(canvas, engine.m, engine.spec);
+  renderer.hint = () => engine.rangeHint;
   renderSeats();
   if (events.length) {
     input.replaying = true;

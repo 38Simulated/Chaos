@@ -15,6 +15,7 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.decorators.http import require_POST
 
+from . import rules
 from .context_processors import site_origin
 from .models import MAX_NAME, MAX_SEATS, Game, Player
 
@@ -134,15 +135,25 @@ def index(request):
     return render(request, 'game/index.html', context)
 
 
+def custom(request):
+    """The form for a game with custom rules; it posts to create()."""
+    return render(request, 'game/custom.html', {
+        'error': request.GET.get('error'),
+        'turns': rules.TURNS, 'abilities': rules.ABILITY, 'spell_counts': rules.SPELLS,
+        'stats': rules.STATS, 'stats_for': rules.STATS_FOR})
+
+
 @require_POST
 def create(request):
     name = _player_name(request)
     if name is None:
-        return redirect(reverse('index') + '?' + urlencode({'error': NAME_TAKEN}))
+        back = 'custom' if request.POST.get('custom') else 'index'
+        return redirect(reverse(back) + '?' + urlencode({'error': NAME_TAKEN}))
     with transaction.atomic():
         game = Game.objects.create(show_spells=bool(request.POST.get('show_spells')),
                                    public_replay=bool(request.POST.get('public_replay')),
-                                   public_watch=bool(request.POST.get('public_watch')))
+                                   public_watch=bool(request.POST.get('public_watch')),
+                                   rules=rules.parse(request.POST))
         player = Player.objects.create(game=game, seat=0, name=name,
                                        user=_account(request))
     _session_players(request)[game.code] = player.token
@@ -308,5 +319,6 @@ def replay_data(request, code=None, watch_id=None):
         'players': [{'seat': p.seat, 'name': p.name, 'registered': p.registered}
                     for p in game.players.select_related('user') if p.seat >= 0],
         'survivors': game.survivors,
+        'rules': game.rules,
         'events': [e.as_dict() for e in game.events.all()],
     })

@@ -1,0 +1,65 @@
+{% extends "game/base.html" %}
+{% load static %}
+{% block title %}Custom game - Chaos Online{% endblock %}
+{% block indexing %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+{% include "game/_userbar.html" %}
+<main class="lobby">
+  <h1 class="title"><a href="{% url 'index' %}"><img src="{% static 'game/img/logo.png' %}" alt="CHAOS" width="960" height="272"></a></h1>
+  <p class="subtitle">Custom game</p>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <div class="cards">
+    <form class="card custom" method="post" action="{% url 'create' %}">
+      {% csrf_token %}
+      <input type="hidden" name="custom" value="1">
+      <h2>New custom game</h2>
+      {% if user.is_authenticated %}
+      <p class="playing-as">Playing as <strong>{{ user.username|slice:':20' }}</strong></p>
+      {% else %}
+      <label>Your name <input name="name" maxlength="20" required autofocus></label>
+      {% endif %}
+      <label class="check"><input type="checkbox" name="show_spells"> Players can see each other's spells</label>
+      <label class="check"><input type="checkbox" name="public_replay"> Anyone with the link can watch the replay</label>
+      <label class="check"><input type="checkbox" name="public_watch"> Anyone can watch it live (listed on the front page)</label>
+
+      <h3>Rules</h3>
+      <p class="hint">Anything left as "original" plays as in the Spectrum game.</p>
+      <label>Number of turns
+        <select name="turns">
+          <option value="">Original (2 &times; wizards + 15)</option>
+          {% for n in turns %}<option value="{{ n }}">{{ n }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Spells for each wizard, besides Disbelieve
+        <select name="spells">
+          <option value="">Original (random, 11-20; more for strong computer wizards)</option>
+          {% for n in spell_counts %}<option value="{{ n }}">{{ n }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Every wizard's ability (each point adds 10% to every casting chance)
+        <select name="ability">
+          <option value="">Original (random, 0-2; better for strong computer wizards)</option>
+          {% for n in abilities %}<option value="{{ n }}">{{ n }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Wizards' combat, defence, manoeuvre and magic resistance
+        <select name="stats">
+          <option value="">Original (each wizard rolls their own)</option>
+          {% for value, text in stats.items %}<option value="{{ value }}">{{ text|capfirst }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>&hellip;for
+        <select name="stats_for">
+          {% for value, text in stats_for.items %}<option value="{{ value }}">{{ text|capfirst }}</option>{% endfor %}
+        </select>
+      </label>
+      <p class="hint">Fixed stats ignore the computer level's bonus, so everyone they apply to is equal.</p>
+      <label class="check"><input type="checkbox" name="turmoil"> Turmoil can be a starting spell</label>
+      <label class="check"><input type="checkbox" name="next_key"> <kbd>N</kbd> moves the cursor to the next piece that hasn't moved</label>
+      <label class="check"><input type="checkbox" name="ranges"> Show movement and shooting ranges on the board</label>
+      <button type="submit">Create game</button>
+      <p class="hint">Everyone in the game, and anyone watching, can see these rules.</p>
+    </form>
+  </div>
+</main>
+{% endblock %}

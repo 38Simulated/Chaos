@@ -76,6 +76,7 @@ export const UiMixin = {
     m[SV.FLAGS2] = 8;
     if (m[V.ISCPU]) k = this.r_CDC0();
     m[0xAC32] = k;
+    if (k === 0x4E && this.selecting && this.rules.nextKey && !m[V.ISCPU]) return this.nextUnmoved(bc);
     let b = bc >> 8, c = bc & 0xFF;
     const up = () => { b--; if (b === 0) b++; };
     const dn = () => { b++; if (b === 0x0B) b--; };
