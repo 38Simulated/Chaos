@@ -29,6 +29,7 @@ Numbers and dice:
 9. [Fire, blobs, woods and castles](#fire-blobs-woods-and-castles)
 10. [Computer wizards](#computer-wizards)
 11. [Quirks of the original](#quirks-of-the-original)
+12. [Left out of the original](#left-out-of-the-original)
 
 ## The game and its turns
 
@@ -708,3 +709,29 @@ Turmoil hang):
 - **Army values are off by two.** When it rates a wizard's army, the computer
   looks up each piece's value two entries along the table (`$C859`). So, for
   example, a Goblin counts as a Faun would.
+
+## Left out of the original
+
+The original's memory holds a creature and several spells that never made it
+into the game. Nothing in the code uses them, so they never appear in Chaos or
+in Chaos Online.
+
+- **The Troll.** A complete piece record (`$E70D`) that the piece table
+  (`$E3E0`) never points to, so it can't be cast or appear. Its statistics:
+
+  | Combat | Ranged | Range | Defence | Movement | Manoeuvre | Magic res. | Chance | Align. |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | 4 | 0 | 0 | 8 | 1 | 1 | 4 | 6 | −1 |
+
+  It has its own graphics too: three animation frames of a figure swinging a
+  weapon and a corpse (`$F433`-`$F4B2`), in the gap between the Manticore's and
+  the Unicorn's.
+- **Eight spells.** The spell-name messages include Blind, Tempest, Teleport,
+  Dead Revenge, Consecration, Dispel, Counter Spell and Magic Sleep. None has an
+  entry in the spell table (`$7D60`) or any code behind it.
+- **Sleep.** The square-information line can show "(ASLEEP)" after a creature's
+  name, when bit 3 of its owner byte is set. Nothing ever sets that bit, so this
+  is presumably what was left of Magic Sleep.
+
+Memory also holds over a hundred of the assembler's labels (such as `WALKY`,
+`RAISD` and `GETPL`, around `$A3BE`-`$ABBF`). They aren't part of the game.

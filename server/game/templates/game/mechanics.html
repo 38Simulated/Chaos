@@ -16,7 +16,8 @@
       <a href="#the-spells">Spells</a> &middot; <a href="#movement">Movement</a> &middot;
       <a href="#combat">Combat</a> &middot; <a href="#death-corpses-and-the-undead">Death and corpses</a> &middot;
       <a href="#fire-blobs-woods-and-castles">Fire, blobs, woods and castles</a> &middot;
-      <a href="#computer-wizards">Computer wizards</a> &middot; <a href="#quirks-of-the-original">Quirks</a>
+      <a href="#computer-wizards">Computer wizards</a> &middot; <a href="#quirks-of-the-original">Quirks</a> &middot;
+      <a href="#left-out-of-the-original">Left out</a>
     </nav>
     <p>Numbers and dice:</p>
     <ul>
@@ -461,6 +462,21 @@
       <li><strong>The computer's Turmoil test reads the wrong byte.</strong> When deciding whether to cast Turmoil, the computer adds the ROM byte at <code>$2100</code> to each target's score instead of keeping a running total (<code>LD HL,($A172)</code> for <code>LD HL,$A172</code>).</li>
       <li><strong>Army values are off by two.</strong> When it rates a wizard's army, the computer looks up each piece's value two entries along the table. So, for example, a Goblin counts as a Faun would.</li>
     </ul>
+    <h3 id="left-out-of-the-original">Left out of the original</h3>
+    <p>The original's memory holds a creature and several spells that never made it into the game. Nothing in the code uses them, so they never appear in Chaos or in Chaos Online.</p>
+    <ul>
+      <li><strong>The Troll.</strong> A complete piece record that the piece table never points to, so it can't be cast or appear. Its statistics:
+        <div class="table"><table>
+          <thead><tr><th>Combat</th><th>Ranged</th><th>Range</th><th>Defence</th><th>Movement</th><th>Manoeuvre</th><th>Magic res.</th><th>Chance</th><th>Align.</th></tr></thead>
+          <tbody>
+            <tr><td>4</td><td>0</td><td>0</td><td>8</td><td>1</td><td>1</td><td>4</td><td>6</td><td>−1</td></tr>
+          </tbody></table></div>
+        <p>It has its own graphics too: three animation frames of a figure swinging a weapon and a corpse, in the gap between the Manticore's and the Unicorn's.</p>
+      </li>
+      <li><strong>Eight spells.</strong> The spell-name messages include Blind, Tempest, Teleport, Dead Revenge, Consecration, Dispel, Counter Spell and Magic Sleep. None has an entry in the spell table or any code behind it.</li>
+      <li><strong>Sleep.</strong> The square-information line can show "(ASLEEP)" after a creature's name, when one of its flags is set. Nothing ever sets that flag, so this is presumably what was left of Magic Sleep.</li>
+    </ul>
+    <p>Memory also holds over a hundred of the assembler's labels (such as <code>WALKY</code>, <code>RAISD</code> and <code>GETPL</code>). They aren't part of the game.</p>
   </article>
 </main>
 {% endblock %}
