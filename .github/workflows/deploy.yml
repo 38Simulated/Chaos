@@ -18,7 +18,7 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [production]
   workflow_dispatch:
 
 # one deployment at a time; a newer push waits for the running one
