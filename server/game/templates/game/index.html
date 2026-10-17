@@ -1,0 +1,111 @@
+{% extends "game/base.html" %}
+{% load static %}
+{% block title %}Chaos Online - play the ZX Spectrum classic in your browser{% endblock %}
+{% block indexing %}{% if join_code or error %}<meta name="robots" content="noindex">{% else %}{{ block.super }}{% endif %}{% endblock %}
+{% block body %}
+{% include "game/_userbar.html" %}
+<main class="lobby">
+  <h1 class="title"><img src="{% static 'game/img/logo.png' %}" alt="CHAOS" width="960" height="272"></h1>
+  <p class="subtitle">The Battle of Wizards - online</p>
+  {% if not join_code %}
+  <p class="intro">Julian Gollop's 1985 ZX Spectrum game, played in your browser. Up to eight wizards cast spells
+    and summon creatures until one is left: play with friends, against computer wizards, or watch other games.
+    Free, and no account needed. New to Chaos? Read <a href="{% url 'help' %}">how to play</a>, or find other
+    players on our <a href="https://discord.gg/WBpZ5BwfHY" target="_blank" rel="noopener">Discord</a>.</p>
+  {% endif %}
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <div class="cards">
+    {% if not join_code %}
+    <form class="card" method="post" action="{% url 'create' %}">
+      {% csrf_token %}
+      <h2>New game</h2>
+      {% if user.is_authenticated %}
+      <p class="playing-as">Playing as <strong>{{ user.username|slice:':20' }}</strong></p>
+      {% else %}
+      <label>Your name <input name="name" maxlength="20" required autofocus></label>
+      {% endif %}
+      <label class="check"><input type="checkbox" name="show_spells"> Players can see each other's spells</label>
+      <label class="check"><input type="checkbox" name="public_replay"> Anyone with the link can watch the replay</label>
+      <label class="check"><input type="checkbox" name="public_watch"> Anyone can watch it live (listed below)</label>
+      <button type="submit">Create game</button>
+      <p class="hint">You will get a code to share. Up to 8 wizards; empty seats can be computer wizards.</p>
+    </form>
+    {% endif %}
+    <form class="card" method="post" action="{% url 'join' %}">
+      {% csrf_token %}
+      <h2>Join a game</h2>
+      {% if user.is_authenticated %}
+      <p class="playing-as">Playing as <strong>{{ user.username|slice:':20' }}</strong></p>
+      {% else %}
+      <label>Your name <input name="name" maxlength="20" required {% if join_code %}autofocus{% endif %}></label>
+      {% endif %}
+      <label>Game code <input name="code" maxlength="8" value="{{ join_code|default:'' }}" required class="code"></label>
+      <button type="submit">Join</button>
+      {% if join_code and not user.is_authenticated %}
+      <p class="hint">Already in this game on another browser?
+        <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">Log in</a> to get your seat back.</p>
+      {% endif %}
+    </form>
+  </div>
+  {% if not join_code %}
+  <section class="card mygames live" id="live">
+    <h2>Watch live</h2>
+    {% if live_games %}
+    <ul>
+      {% for row in live_games %}
+      <li>
+        <a href="{% url 'watch' row.game.watch_id %}">Watch</a>
+        <span>{% for p in row.players %}{{ p.name }}{% if p.registered %}<span class="reg" title="Registered player">&#10003;</span>{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</span>
+        <span class="state">{{ row.state }}</span>
+        <span class="hint">{{ row.game.last_move|timesince }} ago</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="hint">No public games are being played right now.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+  {% if user.is_authenticated and not join_code %}
+  <section class="card mygames" id="games">
+    <h2>Your games{% if your_turn_count %} <span class="yourturn">&middot; {{ your_turn_count }} waiting for you</span>{% endif %}</h2>
+    <nav class="filters">
+      {% for key, label in filters.items %}
+      {% if key == show %}<strong>{{ label }}</strong>{% else %}<a href="?show={{ key }}#games">{{ label }}</a>{% endif %}
+      {% endfor %}
+    </nav>
+    {% if my_games %}
+    <ul>
+      {% for row in my_games %}
+      <li class="{% if row.your_turn %}turn{% endif %}">
+        <a href="{% url 'game' row.game.code %}" class="code">{{ row.game.code }}</a>
+        <span>{{ row.player.name }}{% if row.player.seat < 0 %} (watching){% endif %}</span>
+        <span class="state">{{ row.state }}</span>
+        {% if row.game.status == 'finished' %}<a href="{% url 'replay' row.game.code %}">Watch replay</a>{% endif %}
+        {% if row.is_host and row.game.status == 'lobby' or row.is_host and row.game.status == 'playing' %}
+        <form method="post" action="{% url 'cancel' row.game.code %}" class="confirm"
+              data-confirm="Cancel game {{ row.game.code }}? Nobody will be able to play it any more.">
+          {% csrf_token %}<input type="hidden" name="next" value="{% url 'index' %}?show=cancelled#games">
+          <button type="submit" class="small">Cancel</button>
+        </form>
+        {% elif row.is_host and row.game.status == 'cancelled' %}
+        <form method="post" action="{% url 'delete' row.game.code %}" class="confirm"
+              data-confirm="Delete game {{ row.game.code }}? This can't be undone.">
+          {% csrf_token %}<input type="hidden" name="next" value="{% url 'index' %}?show=cancelled#games">
+          <button type="submit" class="small">Delete</button>
+        </form>
+        {% endif %}
+        <span class="hint">{{ row.last|timesince }} ago</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="hint">{% if show == 'finished' %}No finished games yet.{% elif show == 'cancelled' %}No cancelled games.{% elif show == 'active' %}No active games. Create one above, or join with a code.{% else %}No games yet.{% endif %}</p>
+    {% endif %}
+  </section>
+  {% elif not user.is_authenticated %}
+  <p class="hint">No account needed. <a href="{% url 'signup' %}">Sign up</a> if you want to get back to your games from any browser.</p>
+  {% endif %}
+</main>
+<script src="{% static 'game/js/confirm.js' %}"></script>
+{% endblock %}

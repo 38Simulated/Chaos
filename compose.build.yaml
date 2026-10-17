@@ -1,0 +1,14 @@
+# Builds the site image from the source, on top of compose.yaml:
+#
+#   docker compose -f compose.yaml -f compose.build.yaml up -d --build
+#   docker compose -f compose.yaml -f compose.build.yaml build
+#
+# The image gets the CHAOS_IMAGE name (default chaos-online:latest).
+
+services:
+  web:
+    build: ./server
+
+  # Runs the image web builds; never look for it in a registry.
+  migrate:
+    pull_policy: never

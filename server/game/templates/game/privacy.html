@@ -1,0 +1,40 @@
+{% extends "game/base.html" %}
+{% load static %}
+{% block title %}Privacy policy - Chaos Online{% endblock %}
+{% block description %}What Chaos Online collects (usernames, player names, cookies and server logs), why, and how long it is kept.{% endblock %}
+{% block body %}
+<main class="lobby">
+  <h1 class="title"><a href="{% url 'index' %}"><img src="{% static 'game/img/logo.png' %}" alt="CHAOS" width="960" height="272"></a></h1>
+  <article class="card policy">
+    <h2>Privacy policy</h2>
+    <p>Effective date: 16 October 2026<br>
+      Contact: <a href="mailto:38simulated@gmail.com">38simulated@gmail.com</a></p>
+
+    <h3>1. What data we collect and why</h3>
+    <ul>
+      <li><strong>Account sign-up:</strong> when you register or create an account, we collect your
+        username and a password. We use this solely to manage your account and provide you with the
+        service. The lawful basis for this is fulfilling our service agreement with you. Your password
+        is stored only in a scrambled (hashed) form that cannot be turned back into the password.</li>
+      <li><strong>Player names:</strong> you can play without an account. The name you enter when
+        you create or join a game is saved with that game and shown to the other players, and in its
+        replays. We use it only to run the game (fulfilling our service agreement with you).</li>
+      <li><strong>Cookies:</strong> we set a session cookie, which lets the site recognise you when you
+        come back to a game or stay logged in, and a security cookie that protects forms from forgery.
+        Both are needed for the site to work. We use no advertising, tracking or analytics cookies.</li>
+      <li><strong>Website logs:</strong> when you visit our website, our server automatically records
+        standard technical information, including your IP address, browser type, and access
+        timestamps. We use this data strictly for site security, preventing abuse, and technical
+        troubleshooting (legitimate interests).</li>
+    </ul>
+
+    <h3>2. How long we keep your data</h3>
+    <ul>
+      <li>Your username is kept indefinitely, as it is required to appear on historic game replays.
+        The same goes for the names entered in games.</li>
+      <li>Cookies stay in your browser until they expire or you clear them.</li>
+      <li>Server logs containing IP addresses are deleted at regular intervals.</li>
+    </ul>
+  </article>
+</main>
+{% endblock %}

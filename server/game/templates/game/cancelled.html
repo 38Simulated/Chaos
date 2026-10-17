@@ -1,0 +1,25 @@
+{% extends "game/base.html" %}
+{% load static %}
+{% block title %}Chaos &middot; {{ game.code }} cancelled{% endblock %}
+{% block indexing %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+<main class="lobby">
+  <h1 class="title"><a href="{% url 'index' %}"><img src="{% static 'game/img/logo.png' %}" alt="CHAOS" width="960" height="272"></a></h1>
+  <article class="card policy">
+    <h2>Game <span class="code">{{ game.code }}</span> was cancelled</h2>
+    {% if is_host %}
+    <p>You cancelled this game. Nobody can play or watch it any more. Delete it when you no longer need it.</p>
+    <form method="post" action="{% url 'delete' game.code %}" class="confirm"
+          data-confirm="Delete game {{ game.code }}? This can't be undone.">
+      {% csrf_token %}
+      <button type="submit">Delete game</button>
+      <a href="{% url 'index' %}">Home</a>
+    </form>
+    {% else %}
+    <p>The host cancelled this game, so it can't be played or watched any more.</p>
+    <p><a href="{% url 'index' %}">Home</a></p>
+    {% endif %}
+  </article>
+</main>
+<script src="{% static 'game/js/confirm.js' %}"></script>
+{% endblock %}

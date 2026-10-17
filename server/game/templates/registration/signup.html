@@ -1,0 +1,21 @@
+{% extends "game/base.html" %}
+{% load static %}
+{% block title %}Chaos &middot; Sign up{% endblock %}
+{% block indexing %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+<main class="lobby">
+  <h1 class="title"><a href="{% url 'index' %}"><img src="{% static 'game/img/logo.png' %}" alt="CHAOS" width="960" height="272"></a></h1>
+  <div class="cards">
+    <form class="card" method="post" action="{% url 'signup' %}">
+      {% csrf_token %}
+      <h2>Sign up</h2>
+      {% include "game/_form_fields.html" %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit">Create account</button>
+      <p class="hint">An account is optional. It lets you get back to your games from any browser.
+        Games you joined in this browser move to the new account.</p>
+      <p class="hint">Already have one? <a href="{% url 'login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Log in</a>.</p>
+    </form>
+  </div>
+</main>
+{% endblock %}

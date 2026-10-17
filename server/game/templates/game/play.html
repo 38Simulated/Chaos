@@ -1,0 +1,107 @@
+{% extends "game/base.html" %}
+{% load static %}
+{% block title %}Chaos &middot; {% if watching %}watching{% else %}{{ room }}{% endif %}{% endblock %}
+{% block indexing %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+<div class="play">
+  <section class="screen-wrap">
+    <canvas id="screen" width="320" height="240" tabindex="0"></canvas>
+    <div id="overlay" class="overlay"></div>
+    <div id="curtain" class="curtain hidden"><p id="curtain-text"></p></div>
+    <div id="catchup" class="catchup hidden">
+      <p>Catching up with the game&hellip;</p>
+      <div class="catchup-track"><div id="catchup-bar" class="catchup-bar"></div></div>
+      <p id="catchup-count" class="hint"></p>
+    </div>
+  </section>
+  <aside class="side">
+    <div class="box">
+      {% if watching %}
+      <div class="row"><span class="label">Watching a public game</span>
+        <a href="{% url 'index' %}" class="small-link">Home</a></div>
+      {% else %}
+      <div class="row"><span class="label">Game</span> <strong id="code">{{ room }}</strong>
+        <button id="copy" class="small" title="Copy the invite link: it lets people join">Copy link</button>
+        <a href="{% url 'index' %}" class="small-link">Home</a></div>
+      {% endif %}
+      <div id="status" class="status">Connecting&hellip;</div>
+      <p class="hint">{% if game.show_spells %}Spells are visible to everyone.{% else %}Each wizard's spells are hidden from the others{% if watching %} and from watchers{% endif %}.{% endif %}</p>
+      {% if watching %}
+      <button id="copy-watch" class="small">Copy watch link</button>
+      {% else %}
+      <div class="public">
+        {% if is_host %}
+        <label class="check"><input type="checkbox" id="public"{% if game.public_watch %} checked{% endif %}> Anyone can watch (listed on the front page)</label>
+        {% else %}
+        <p id="public-note" class="hint{% if not game.public_watch %} hidden{% endif %}">Anyone can watch this game.</p>
+        {% endif %}
+        <div id="watch-row" class="row{% if not game.public_watch %} hidden{% endif %}">
+          <button id="copy-watch" class="small" title="Watchers can't join or play">Copy watch link</button>
+          <span class="hint">for people to watch</span>
+        </div>
+        {% if is_host %}
+        <label id="watch-chat-row" class="check{% if not game.public_watch %} hidden{% endif %}"><input type="checkbox" id="watch-chat"{% if game.watch_chat %} checked{% endif %}> Watchers can chat</label>
+        {% endif %}
+      </div>
+      {% if is_host and game.status != 'finished' %}
+      <form id="cancel-game" method="post" action="{% url 'cancel' room %}" class="confirm"
+            data-confirm="Cancel this game for everyone? Nobody will be able to play it any more.">
+        {% csrf_token %}<button type="submit" class="small">Cancel game</button>
+      </form>
+      {% endif %}
+      {% endif %}
+    </div>
+    <div class="box">
+      <h3>Wizards</h3>
+      <ol id="seats" class="seats"></ol>
+      <p id="rounds" class="hint hidden"></p>
+      <button id="start" class="hidden">Start game</button>
+      <p id="lobby-hint" class="hint hidden">When everyone has joined, the host starts the game. The host answers
+        for empty seats (make them computer wizards with <kbd>Y</kbd>).</p>
+    </div>
+    <div class="box keys">
+      {% if not watching %}
+      <h3>Keys</h3>
+      <p><kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> <kbd>A</kbd> <kbd>D</kbd> <kbd>Z</kbd><kbd>X</kbd><kbd>C</kbd> move cursor
+        &middot; <kbd>S</kbd> select &middot; <kbd>K</kbd> cancel &middot; <kbd>I</kbd> info
+        &middot; <kbd>1</kbd>&ndash;<kbd>8</kbd> show a wizard's creations &middot; <kbd>0</kbd> end turn</p>
+      {% endif %}
+      <div class="sound">
+        <label class="check"><input type="checkbox" id="sound" checked> Sound</label>
+        <input type="range" id="volume" min="0" max="100" step="5" value="50" aria-label="Volume" title="Volume">
+      </div>
+    </div>
+    <div class="box chat">
+      <h3>Chat</h3>
+      <div id="chatlog" class="chatlog"></div>
+      {% if watching %}
+      <p id="chat-off" class="hint{% if game.watch_chat %} hidden{% endif %}">The host has turned off chat for watchers.</p>
+      <form id="chatform" class="{% if not game.watch_chat %}hidden{% endif %}">
+        {% if user.is_authenticated %}
+        <p class="hint">Chatting as <strong>{{ user.username|slice:":20" }}</strong></p>
+        {% else %}
+        <input id="chatname" maxlength="20" placeholder="Your name" autocomplete="nickname" aria-label="Your name">
+        {% endif %}
+        <input id="chatinput" maxlength="200" placeholder="Say something&hellip;" autocomplete="off">
+        <p id="chat-refused" class="hint hidden"></p>
+      </form>
+      {% else %}
+      <form id="chatform"><input id="chatinput" maxlength="200" placeholder="Say something&hellip;" autocomplete="off"></form>
+      {% endif %}
+    </div>
+  </aside>
+</div>
+<script>
+  window.CHAOS = {
+    watching: {{ watching|yesno:"true,false" }},
+    seat: {% if player %}{{ player.seat }}{% else %}-1{% endif %},
+    showSpells: {{ game.show_spells|yesno:"true,false" }},
+    wsPath: "{{ ws_path|escapejs }}",
+    inviteUrl: "{% if room %}{% url 'game' room %}{% endif %}",
+    watchUrl: "{% url 'watch' game.watch_id %}",
+    replayUrl: "{% if watching %}{% url 'watch_replay' game.watch_id %}{% else %}{% url 'replay' room %}{% endif %}",
+  };
+</script>
+<script type="module" src="{% static 'game/js/main.js' %}"></script>
+<script src="{% static 'game/js/confirm.js' %}"></script>
+{% endblock %}

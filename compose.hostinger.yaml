@@ -1,0 +1,93 @@
+# Chaos Online on a Hostinger VPS, deployed by .github/workflows/deploy.yml.
+#
+# Hostinger's Docker Manager fetches the repository at the pushed commit and
+# runs this file there, so the site image is built on the VPS. The workflow
+# passes the settings below as environment variables (from GitHub secrets
+# and variables); nothing needs to be kept on the server.
+#
+# The VPS's existing Traefik (Hostinger's Traefik project) serves the site
+# over HTTPS and gets the certificate for DOMAIN; the DNS record must point
+# at the VPS first. That Traefik runs with host networking, so it reaches the
+# site on this project's own network; the labels on the site tell it where
+# to send DOMAIN. TRAEFIK_ENTRYPOINT and TRAEFIK_CERTRESOLVER default to the
+# names that Traefik uses (websecure, letsencrypt).
+#
+# DOMAIN_ALIAS (optional) is a second host name, such as the bare domain when
+# DOMAIN is www.example.com. Traefik serves it too (with its own certificate)
+# and the site redirects it to DOMAIN.
+#
+# This is compose.yaml with the build and HTTPS added; keep the two in step.
+
+services:
+  web:
+    build: ./server
+    image: chaos-online:latest
+    restart: unless-stopped
+    environment: &web-env
+      DJANGO_DEBUG: "0"
+      DJANGO_HTTPS: "1"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?set DJANGO_SECRET_KEY}
+      DJANGO_ALLOWED_HOSTS: ${DOMAIN:?set DOMAIN},${DOMAIN_ALIAS:-${DOMAIN}}
+      # requests for any other allowed host name are redirected here
+      DJANGO_CANONICAL_HOST: ${DOMAIN:?set DOMAIN}
+      DJANGO_CSRF_TRUSTED_ORIGINS: https://${DOMAIN:?set DOMAIN}
+      DATABASE_URL: postgres://chaos:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/chaos
+      REDIS_URL: redis://redis:6379/0
+      # shown in the page footer next to the version
+      CHAOS_COMMIT: ${CHAOS_COMMIT:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    # the access log holds visitors' IP addresses; keep only the latest
+    # 3 x 10 MB of it (the privacy policy says old logs are deleted)
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.chaos-online.rule=Host(`${DOMAIN:?set DOMAIN}`) || Host(`${DOMAIN_ALIAS:-${DOMAIN}}`)
+      - traefik.http.routers.chaos-online.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
+      - traefik.http.routers.chaos-online.tls=true
+      - traefik.http.routers.chaos-online.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}
+      - traefik.http.services.chaos-online.loadbalancer.server.port=8000
+
+  # Applies database migrations, then exits; the site starts after it succeeds.
+  migrate:
+    image: chaos-online:latest
+    pull_policy: never
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    environment: *web-env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: chaos
+      POSTGRES_DB: chaos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chaos -d chaos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

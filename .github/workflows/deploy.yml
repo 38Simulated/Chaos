@@ -1,0 +1,47 @@
+# Deploys to the Hostinger VPS on every push to main (or by hand from the
+# Actions tab). Hostinger's Docker Manager fetches this commit and runs
+# compose.hostinger.yaml, building the site image on the VPS.
+#
+# Settings of the "production" environment (Settings > Environments > production):
+#   secret   HOSTINGER_API_KEY   API key from hPanel
+#   secret   DJANGO_SECRET_KEY   python -c "import secrets; print(secrets.token_urlsafe(50))"
+#   secret   POSTGRES_PASSWORD   same command; letters, digits, - and _ only
+#   variable HOSTINGER_VM_ID     the number in the VPS host name (srv123456 -> 123456)
+#   variable DOMAIN              the site's host name, e.g. www.example.com
+#   variable DOMAIN_ALIAS        optional: another host name that redirects to
+#                                DOMAIN, e.g. example.com
+#
+# The action reports success once Hostinger accepts the deployment; whether
+# the build and migrations then worked shows in hPanel's Docker Manager.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# one deployment at a time; a newer push waits for the running one
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # the secrets and variables below are set on this environment
+    environment: production
+    steps:
+      - name: Deploy to Hostinger
+        uses: hostinger/deploy-on-vps@v2
+        with:
+          api-key: ${{ secrets.HOSTINGER_API_KEY }}
+          virtual-machine: ${{ vars.HOSTINGER_VM_ID }}
+          project-name: chaos-online
+          docker-compose-path: compose.hostinger.yaml
+          environment-variables: |
+            DOMAIN=${{ vars.DOMAIN }}
+            DOMAIN_ALIAS=${{ vars.DOMAIN_ALIAS }}
+            DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            CHAOS_COMMIT=${{ github.sha }}

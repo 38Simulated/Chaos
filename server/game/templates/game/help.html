@@ -1,0 +1,118 @@
+{% extends "game/base.html" %}
+{% load static %}
+{% block title %}How to play - Chaos Online{% endblock %}
+{% block description %}How to play Chaos Online: starting and joining games, setting up wizards, the keys, spells and turns, watching and replays.{% endblock %}
+{% block body %}
+<main class="lobby">
+  <h1 class="title"><a href="{% url 'index' %}"><img src="{% static 'game/img/logo.png' %}" alt="CHAOS" width="960" height="272"></a></h1>
+  <article class="card policy help">
+    <h2>How to play Chaos Online</h2>
+    <p>Chaos Online is Julian Gollop's 1985 ZX Spectrum game <em>Chaos</em>, played over the internet. Up to
+      eight wizards fight on one board, casting spells and summoning creatures, until one wizard is left.
+      Every player's browser runs the original game, so it plays exactly as it did on the Spectrum.</p>
+    <nav class="toc">
+      <a href="#start">Starting a game</a> &middot; <a href="#setup">Setting up</a> &middot;
+      <a href="#keys">Keys</a> &middot; <a href="#turn">A turn</a> &middot;
+      <a href="#people">Absent players</a> &middot; <a href="#watch">Watching and replays</a> &middot;
+      <a href="#accounts">Accounts</a> &middot; <a href="#cancel">Cancelling a game</a> &middot;
+      <a href="#discord">Discord</a>
+    </nav>
+    <p>Every rule and number of the game, from casting chances to combat and the creatures' statistics, is on the
+      <a href="{% url 'mechanics' %}">game mechanics</a> page.</p>
+
+    <h3 id="start">Starting a game</h3>
+    <ul>
+      <li><strong>Create a game</strong> on the front page. Type your name (or log in, and you play under your
+        username), choose the options, and press <em>Create game</em>. You are the game's host.</li>
+      <li><strong>Invite people</strong> by giving them the five-letter game code, or with the <em>Copy link</em>
+        button on the game page. They enter the code under <em>Join a game</em>, or just open the link.</li>
+      <li>When everyone has joined, the host presses <em>Start game</em>. People who join after that can only
+        watch.</li>
+    </ul>
+    <p>The options when creating a game:</p>
+    <ul>
+      <li><strong>Players can see each other's spells:</strong> otherwise, while a wizard picks a spell, everyone
+        else's screen is covered.</li>
+      <li><strong>Anyone with the link can watch the replay:</strong> otherwise only the players can watch it.</li>
+      <li><strong>Anyone can watch it live:</strong> the game is listed under <em>Watch live</em> on the front page.
+        The host can switch this on or off at any time on the game page.</li>
+    </ul>
+
+    <h3 id="setup">Setting up</h3>
+    <p>After the start, the game asks the original's setup questions. The host answers the first two: how many
+      wizards (2 to 8) and the level of the computer wizards. Then each wizard is set up in turn: its name, whether
+      it is computer controlled, its character and its colour. Wizard 1 is the first seat in the <em>Wizards</em>
+      list, wizard 2 the second, and so on.</p>
+    <ul>
+      <li>Each player answers the questions for their own wizard. Answer <kbd>N</kbd> to
+        <em>Computer controlled?</em> to play it yourself.</li>
+      <li>The host answers for wizards nobody has joined as. Answer <kbd>Y</kbd> to make them computer wizards,
+        or <kbd>N</kbd> to play them yourself.</li>
+    </ul>
+
+    <h3 id="keys">Keys</h3>
+    <ul>
+      <li><kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> <kbd>A</kbd> <kbd>D</kbd> <kbd>Z</kbd><kbd>X</kbd><kbd>C</kbd>
+        move the cursor, in the eight directions they surround <kbd>S</kbd> on the keyboard.</li>
+      <li><kbd>S</kbd> selects: a spell's target, or a creature to move.</li>
+      <li><kbd>K</kbd> cancels.</li>
+      <li><kbd>I</kbd> shows information about the creature under the cursor.</li>
+      <li><kbd>1</kbd>&ndash;<kbd>8</kbd> show a wizard's creations on the board.</li>
+      <li><kbd>0</kbd> ends your turn (or leaves a menu).</li>
+    </ul>
+    <p>Only the player whose turn it is can press keys that count. The status above the <em>Wizards</em> list says
+      whose turn it is.</p>
+
+    <h3 id="turn">A turn</h3>
+    <p>Each round has two parts.</p>
+    <ul>
+      <li><strong>Choosing spells.</strong> Each wizard in turn gets a menu: <kbd>1</kbd> to examine their spells,
+        <kbd>2</kbd> to choose the spell to cast (press the key shown next to it), <kbd>3</kbd> to look at the
+        board, and <kbd>4</kbd> to finish. A creature spell asks whether to cast it as an illusion: an illusion
+        always works, but another wizard's <em>Disbelieve</em> spell destroys it.</li>
+      <li><strong>Casting and moving.</strong> Each wizard casts their spell, aiming with the cursor and
+        <kbd>S</kbd>. Then they move: select one of their creatures (or their wizard) with <kbd>S</kbd> and move
+        it with the direction keys. Moving into an enemy attacks it, and creatures with ranged combat get a shot
+        after moving. Press <kbd>0</kbd> when you have finished.</li>
+    </ul>
+    <p>Lawful and chaotic spells shift the balance of the world towards law or chaos, which makes spells of that
+      kind easier to cast. A wizard dies when attacked successfully, and all their creations vanish with them. The
+      last wizard standing wins; if several are still alive after the last round, the game is a draw. The
+      <a href="{% url 'mechanics' %}">game mechanics</a> page has the details.</p>
+
+    <h3 id="people">Absent players</h3>
+    <p>The dot next to each name in the <em>Wizards</em> list shows who is connected. You can close the game and
+      come back later: your seat is kept, and the game continues where it left off. If a player is away, the host
+      can press <em>Take over</em> next to their name to answer for their wizard.</p>
+
+    <h3 id="watch">Watching and replays</h3>
+    <ul>
+      <li>Games that anyone can watch are listed under <em>Watch live</em> on the front page while they are being
+        played (a game with no move for 10 minutes drops off until its next move). Players can share the game with
+        <em>Copy watch link</em>. People watching can't play, and the watch link can't be used to join. They can
+        chat (their messages are marked <em>watching</em>) unless the host turns off <em>Watchers can chat</em>.</li>
+      <li>When a game is over, <em>Watch the replay</em> plays it back from the start.</li>
+    </ul>
+
+    <h3 id="accounts">Accounts</h3>
+    <p>You can play without an account: this browser remembers your games. If you <a href="{% url 'signup' %}">sign
+      up</a> or <a href="{% url 'login' %}">log in</a>:</p>
+    <ul>
+      <li>your games are listed on the front page, in any browser, and the ones waiting for you are
+        highlighted;</li>
+      <li>you always play under your username, and nobody else can use it. A
+        <span class="reg">&#10003;</span> after a name shows a registered player;</li>
+      <li>games you played in this browser before logging in are added to your account.</li>
+    </ul>
+
+    <h3 id="cancel">Cancelling a game</h3>
+    <p>The host can cancel a game that has not finished, with <em>Cancel game</em> on the game page (or
+      <em>Cancel</em> in their list of games). Everyone in it is disconnected and nobody can play or watch it any
+      more. Cancelled games are listed under <em>Cancelled</em>, where the host can delete them for good.</p>
+
+    <h3 id="discord">Discord</h3>
+    <p>Looking for people to play, or want to report a bug or suggest something? Join the
+      <a href="https://discord.gg/WBpZ5BwfHY" target="_blank" rel="noopener">Chaos Online Discord</a>.</p>
+  </article>
+</main>
+{% endblock %}

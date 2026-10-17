@@ -1,0 +1,77 @@
+# Chaos Online: the site (Daphne), PostgreSQL and Redis.
+#
+#   cp .env.example .env      # then set DJANGO_SECRET_KEY and POSTGRES_PASSWORD
+#   docker compose up -d
+#
+# This file only runs an existing image (CHAOS_IMAGE), so it works on a server
+# without the source code: load or pull the image there first. Where the
+# source is, compose.build.yaml adds the build:
+#
+#   docker compose -f compose.yaml -f compose.build.yaml up -d --build
+#
+# Only the site's port is published. PostgreSQL and Redis are reachable on the
+# compose network alone, so they don't clash with local development containers.
+
+services:
+  web:
+    image: ${CHAOS_IMAGE:-chaos-online:latest}
+    restart: unless-stopped
+    environment: &web-env
+      DJANGO_DEBUG: "0"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?set DJANGO_SECRET_KEY in .env}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-*}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+      DATABASE_URL: postgres://chaos:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/chaos
+      REDIS_URL: redis://redis:6379/0
+      # shown in the page footer next to the version
+      CHAOS_COMMIT: ${CHAOS_COMMIT:-}
+    ports:
+      - "${CHAOS_BIND:-127.0.0.1}:${CHAOS_PORT:-8000}:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    # the access log holds visitors' IP addresses; keep only the latest
+    # 3 x 10 MB of it (the privacy policy says old logs are deleted)
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  # Applies database migrations, then exits; the site starts after it succeeds.
+  migrate:
+    image: ${CHAOS_IMAGE:-chaos-online:latest}
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    environment: *web-env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: chaos
+      POSTGRES_DB: chaos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chaos -d chaos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

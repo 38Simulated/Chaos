@@ -1,0 +1,466 @@
+{% extends "game/base.html" %}
+{% load static %}
+{% block title %}Game mechanics - Chaos Online{% endblock %}
+{% block description %}Every rule of Chaos, worked out from the ZX Spectrum original: wizards, creatures and their statistics, spells and casting chances, movement, combat, fire and blobs, and the computer wizards.{% endblock %}
+{% block body %}
+<main class="lobby wide">
+  <h1 class="title"><a href="{% url 'index' %}"><img src="{% static 'game/img/logo.png' %}" alt="CHAOS" width="960" height="272"></a></h1>
+  <article class="card policy help mechanics">
+    <h2>Game mechanics</h2>
+    <p>This page describes how Chaos plays, worked out from the ZX Spectrum original's machine code. Chaos Online
+      runs the original game routine by routine, so everything here applies to both. For how to play on this site,
+      see <a href="{% url 'help' %}">How to play</a>.</p>
+    <nav class="toc">
+      <a href="#the-game-and-its-turns">Turns</a> &middot; <a href="#wizards">Wizards</a> &middot;
+      <a href="#creatures-and-other-pieces">Creatures</a> &middot; <a href="#casting-spells">Casting</a> &middot;
+      <a href="#the-spells">Spells</a> &middot; <a href="#movement">Movement</a> &middot;
+      <a href="#combat">Combat</a> &middot; <a href="#death-corpses-and-the-undead">Death and corpses</a> &middot;
+      <a href="#fire-blobs-woods-and-castles">Fire, blobs, woods and castles</a> &middot;
+      <a href="#computer-wizards">Computer wizards</a> &middot; <a href="#quirks-of-the-original">Quirks</a>
+    </nav>
+    <p>Numbers and dice:</p>
+    <ul>
+      <li>Almost every roll in the game is a random number from 0 to 9 ("a roll" below). A test like "succeeds if a roll is below N" has an N in 10 chance.</li>
+      <li>Distances use the game's own measure: <strong>2 × the larger of the two offsets + the smaller</strong>. One square straight is 2, one diagonal is 3, two squares straight is 4, and so on. Spell and flying ranges are limits on this number. The game shows them halved, as squares, so "range 6" means a distance of up to 13: 6 squares in a straight line, or 4 diagonally.</li>
+    </ul>
+    <h3 id="the-game-and-its-turns">The game and its turns</h3>
+    <p>The board is 15 squares across and 10 down. Two to eight wizards play, each human or computer controlled. Computer wizards share one difficulty level, 1 to 8 (0-7 internally), chosen at the start. The wizards start on fixed squares that depend on how many are playing.</p>
+    <p>A game lasts <strong>2 × wizards + 15 turns</strong> (19 turns for two wizards, 31 for eight). If more than one wizard is still alive at the end, the contest is drawn. It ends early, with a winner, as soon as only one wizard is left.</p>
+    <p>Each turn has these steps:</p>
+    <ol>
+      <li><strong>Choosing spells</strong>. Each living human wizard picks one spell from their list, or none. For a creature spell they also say whether to cast it as an illusion. They can also look over the board and the spells' details.</li>
+      <li><strong>Casting</strong>. In seat order, every wizard casts the spell they chose (computer wizards choose theirs now).</li>
+      <li><em>(The game checks whether only one wizard is left.)</em></li>
+      <li><strong>Spreading</strong>. Gooey Blobs and Magic Fire spread and die out; castles may vanish.</li>
+      <li><strong>Magic Wood</strong>. A wizard sheltering in a Magic Wood may be given a new spell.</li>
+      <li><strong>Movement</strong>. In seat order, each wizard moves and fights with their wizard and every piece they own. Pieces cast this turn can move too.</li>
+      <li><em>(The game checks whether only one wizard is left again.)</em></li>
+    </ol>
+    <h3 id="wizards">Wizards</h3>
+    <h4 id="starting-statistics">Starting statistics</h4>
+    <p>Each wizard's statistics are rolled at the start. "Bonus" is the computer level (0-7) for computer wizards and 0 for humans; halves round down.</p>
+    <div class="table"><table>
+      <thead><tr><th>Statistic</th><th>Human</th><th>Computer at level L</th></tr></thead>
+      <tbody>
+        <tr><td>Combat</td><td>1-5</td><td>1-5 + L/2</td></tr>
+        <tr><td>Ranged combat, range</td><td>none</td><td>none</td></tr>
+        <tr><td>Defence</td><td>1-5</td><td>1-5 + L/2</td></tr>
+        <tr><td>Movement</td><td>1</td><td>1</td></tr>
+        <tr><td>Manoeuvre</td><td>3-7</td><td>3-7 + L/4</td></tr>
+        <tr><td>Magic resistance</td><td>6-8</td><td>6-8</td></tr>
+        <tr><td>Number of spells</td><td>11-15 (+ Disbelieve)</td><td>11-15 + L, at most 20 (+ Disbelieve)</td></tr>
+        <tr><td>Ability</td><td>0-2 (0 most often)</td><td>0-2, more often above 0</td></tr>
+      </tbody></table></div>
+    <h4 id="ability">Ability</h4>
+    <p><strong>Ability</strong> is a wizard's skill at magic. It is a number from 0 to 2, fixed for the whole game; nothing in the game changes it. To see it, examine a wizard: the information screen shows "Ability" next to "Spells".</p>
+    <p>The ability is added to the base casting chance of <strong>every</strong> spell the wizard casts, before the cap of 100%. Each point is worth 10%. So:</p>
+    <ul>
+      <li>a wizard with ability 2 casts a Green Dragon (base 10%) with a 30% chance;</li>
+      <li>the same wizard casts Magic Armour (base 40%) with a 60% chance.</li>
+    </ul>
+    <p>Ability helps with every spell: creatures, Law and Chaos alike. The spell lists and spell information screens show the chance with the ability already included, so a wizard with ability sees higher chances than the table in <a href="#the-spells">The spells</a>.</p>
+    <p><strong>How it's rolled</strong>:</p>
+    <ol>
+      <li>A wizard gets a chance at ability if a roll is above 5 − bonus/2. For humans that is 4 in 10; at computer level 8 (bonus 7) it is 7 in 10.</li>
+      <li>If they pass, the ability is a second roll divided by 4, rounded down:
+        <ul>
+          <li>0 with 4 in 10;</li>
+          <li>1 with 4 in 10;</li>
+          <li>2 with 2 in 10.</li>
+        </ul>
+      </li>
+    </ol>
+    <p>Overall, a human wizard starts with ability 0 about 76% of the time, 1 about 16%, and 2 about 8%.</p>
+    <h4 id="the-spell-list">The spell list</h4>
+    <p>Every wizard's first spell is <strong>Disbelieve</strong>, which is never used up. The rest are drawn at random from spell numbers 2-63. Magic Bolt, Lightning, Subversion and Raise Dead each have two numbers, so they turn up twice as often as other spells. Turmoil's two numbers are 64 and 65, so a wizard never starts with Turmoil: the only way to get it is as a gift from a Magic Wood. The same spell can be drawn more than once.</p>
+    <p>Every other spell is removed from the list once it is cast, whether it works or not, and even if the player then cancels its targeting.</p>
+    <h4 id="upgrades">Upgrades</h4>
+    <p>Several spells improve the wizard who casts them, and change their sprite:</p>
+    <div class="table"><table>
+      <thead><tr><th>Spell</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td>Magic Knife</td><td>+2 combat; the wizard can attack undead</td></tr>
+        <tr><td>Magic Sword</td><td>+4 combat; the wizard can attack undead</td></tr>
+        <tr><td>Magic Shield</td><td>+2 defence</td></tr>
+        <tr><td>Magic Armour</td><td>+4 defence (replaces the shield's +2)</td></tr>
+        <tr><td>Magic Bow</td><td>Ranged combat 3, range 6; the wizard can attack undead</td></tr>
+        <tr><td>Magic Wings</td><td>The wizard flies, up to 6 squares</td></tr>
+        <tr><td>Shadow Form</td><td>+3 defence and moves 3 squares, until the wizard next attacks</td></tr>
+      </tbody></table></div>
+    <p>A weapon's bonus also counts when the wizard shoots with a Magic Bow. Defence bonuses count against combat and against Magic Bolt and Lightning, but not against Vengeance, Decree, Dark Power or Justice, nor against fire or blobs.</p>
+    <p>A wizard has only one weapon slot: casting Magic Knife after Magic Sword swaps the sword for the knife. Shadow Form makes the wizard flicker (two of their four animation frames go blank). It ends the moment they attack.</p>
+    <h3 id="creatures-and-other-pieces">Creatures and other pieces</h3>
+    <p>The table below lists every creature. <strong>Chance</strong> is the spell's base casting chance; <strong>Align</strong> is its alignment (positive Law, negative Chaos); <strong>Value</strong> is how highly computer wizards rate the creature.</p>
+    <div class="table"><table class="stats">
+      <thead><tr><th>Creature</th><th>Combat</th><th>Ranged</th><th>Range</th><th>Defence</th><th>Move</th><th>Manoeuvre</th><th>Magic res.</th><th>Chance</th><th>Align</th><th>Value</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>King Cobra</td><td>4</td><td>-</td><td>-</td><td>1</td><td>1</td><td>6</td><td>1</td><td>90%</td><td>+1</td><td>8</td><td></td></tr>
+        <tr><td>Dire Wolf</td><td>3</td><td>-</td><td>-</td><td>2</td><td>3</td><td>7</td><td>2</td><td>90%</td><td>−1</td><td>11</td><td></td></tr>
+        <tr><td>Goblin</td><td>2</td><td>-</td><td>-</td><td>4</td><td>1</td><td>4</td><td>4</td><td>90%</td><td>−1</td><td>7</td><td></td></tr>
+        <tr><td>Crocodile</td><td>5</td><td>-</td><td>-</td><td>6</td><td>1</td><td>2</td><td>2</td><td>80%</td><td>0</td><td>9</td><td></td></tr>
+        <tr><td>Faun</td><td>3</td><td>-</td><td>-</td><td>2</td><td>1</td><td>7</td><td>8</td><td>80%</td><td>−1</td><td>9</td><td></td></tr>
+        <tr><td>Lion</td><td>6</td><td>-</td><td>-</td><td>4</td><td>4</td><td>8</td><td>3</td><td>60%</td><td>+1</td><td>15</td><td></td></tr>
+        <tr><td>Elf</td><td>1</td><td>2</td><td>6</td><td>2</td><td>1</td><td>5</td><td>7</td><td>70%</td><td>+2</td><td>14</td><td></td></tr>
+        <tr><td>Orc</td><td>2</td><td>-</td><td>-</td><td>1</td><td>1</td><td>4</td><td>4</td><td>100%</td><td>−1</td><td>6</td><td></td></tr>
+        <tr><td>Bear</td><td>6</td><td>-</td><td>-</td><td>7</td><td>2</td><td>6</td><td>2</td><td>60%</td><td>+1</td><td>14</td><td></td></tr>
+        <tr><td>Gorilla</td><td>6</td><td>-</td><td>-</td><td>5</td><td>1</td><td>4</td><td>2</td><td>70%</td><td>0</td><td>11</td><td></td></tr>
+        <tr><td>Ogre</td><td>4</td><td>-</td><td>-</td><td>7</td><td>1</td><td>3</td><td>6</td><td>70%</td><td>−1</td><td>10</td><td></td></tr>
+        <tr><td>Hydra</td><td>7</td><td>-</td><td>-</td><td>8</td><td>1</td><td>4</td><td>6</td><td>50%</td><td>−1</td><td>13</td><td></td></tr>
+        <tr><td>Giant Rat</td><td>1</td><td>-</td><td>-</td><td>1</td><td>3</td><td>8</td><td>2</td><td>100%</td><td>0</td><td>9</td><td></td></tr>
+        <tr><td>Giant</td><td>9</td><td>-</td><td>-</td><td>7</td><td>2</td><td>6</td><td>5</td><td>40%</td><td>+1</td><td>16</td><td></td></tr>
+        <tr><td>Horse</td><td>1</td><td>-</td><td>-</td><td>3</td><td>4</td><td>8</td><td>1</td><td>90%</td><td>+1</td><td>11</td><td>Mount</td></tr>
+        <tr><td>Unicorn</td><td>5</td><td>-</td><td>-</td><td>4</td><td>4</td><td>9</td><td>7</td><td>60%</td><td>+2</td><td>15</td><td>Mount</td></tr>
+        <tr><td>Centaur</td><td>1</td><td>2</td><td>4</td><td>3</td><td>4</td><td>5</td><td>5</td><td>70%</td><td>+1</td><td>15</td><td>Mount</td></tr>
+        <tr><td>Pegasus</td><td>2</td><td>-</td><td>-</td><td>4</td><td>5</td><td>6</td><td>7</td><td>60%</td><td>+2</td><td>15</td><td>Mount, flies</td></tr>
+        <tr><td>Gryphon</td><td>3</td><td>-</td><td>-</td><td>5</td><td>5</td><td>5</td><td>6</td><td>60%</td><td>+1</td><td>16</td><td>Mount, flies</td></tr>
+        <tr><td>Manticore</td><td>3</td><td>1</td><td>3</td><td>6</td><td>5</td><td>6</td><td>8</td><td>40%</td><td>−1</td><td>21</td><td>Mount, flies</td></tr>
+        <tr><td>Bat</td><td>1</td><td>-</td><td>-</td><td>1</td><td>5</td><td>9</td><td>4</td><td>80%</td><td>−1</td><td>15</td><td>Flies</td></tr>
+        <tr><td>Green Dragon</td><td>5</td><td>4</td><td>6</td><td>8</td><td>3</td><td>4</td><td>4</td><td>10%</td><td>−1</td><td>25</td><td>Flies, breathes fire</td></tr>
+        <tr><td>Red Dragon</td><td>7</td><td>3</td><td>5</td><td>9</td><td>3</td><td>4</td><td>5</td><td>10%</td><td>−2</td><td>25</td><td>Flies, breathes fire</td></tr>
+        <tr><td>Golden Dragon</td><td>9</td><td>5</td><td>4</td><td>9</td><td>3</td><td>5</td><td>5</td><td>10%</td><td>+2</td><td>27</td><td>Flies, breathes fire</td></tr>
+        <tr><td>Harpy</td><td>4</td><td>-</td><td>-</td><td>2</td><td>5</td><td>8</td><td>5</td><td>60%</td><td>−1</td><td>17</td><td>Flies</td></tr>
+        <tr><td>Eagle</td><td>3</td><td>-</td><td>-</td><td>3</td><td>6</td><td>8</td><td>2</td><td>70%</td><td>+1</td><td>18</td><td>Flies</td></tr>
+        <tr><td>Vampire</td><td>6</td><td>-</td><td>-</td><td>8</td><td>4</td><td>6</td><td>5</td><td>20%</td><td>−2</td><td>19</td><td>Undead, flies</td></tr>
+        <tr><td>Ghost</td><td>1</td><td>-</td><td>-</td><td>3</td><td>2</td><td>9</td><td>6</td><td>50%</td><td>−1</td><td>13</td><td>Undead, flies, see-through</td></tr>
+        <tr><td>Spectre</td><td>4</td><td>-</td><td>-</td><td>2</td><td>1</td><td>6</td><td>4</td><td>60%</td><td>−1</td><td>9</td><td>Undead</td></tr>
+        <tr><td>Wraith</td><td>5</td><td>-</td><td>-</td><td>5</td><td>2</td><td>4</td><td>5</td><td>50%</td><td>−1</td><td>11</td><td>Undead, see-through</td></tr>
+        <tr><td>Skeleton</td><td>3</td><td>-</td><td>-</td><td>2</td><td>1</td><td>3</td><td>4</td><td>70%</td><td>−1</td><td>7</td><td>Undead</td></tr>
+        <tr><td>Zombie</td><td>1</td><td>-</td><td>-</td><td>1</td><td>1</td><td>2</td><td>3</td><td>90%</td><td>−1</td><td>4</td><td>Undead</td></tr>
+      </tbody></table></div>
+    <p>The other pieces:</p>
+    <div class="table"><table>
+      <thead><tr><th>Piece</th><th>Combat</th><th>Defence</th><th>Magic res.</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Gooey Blob</td><td>0</td><td>0</td><td>0</td><td>Spreads, engulfs creatures, kills wizards</td></tr>
+        <tr><td>Magic Fire</td><td>0</td><td>0</td><td>0</td><td>Spreads, burns creatures, kills wizards; cannot be attacked; see-through</td></tr>
+        <tr><td>Magic Wood</td><td>0</td><td>5</td><td>9</td><td>A wizard can shelter in it</td></tr>
+        <tr><td>Shadow Wood</td><td>2</td><td>4</td><td>9</td><td>Never moves, but attacks a neighbouring enemy</td></tr>
+        <tr><td>Magic Castle, Dark Citadel</td><td>0</td><td>0</td><td>0</td><td>Its owner can shelter in it; cannot be attacked</td></tr>
+        <tr><td>Wall</td><td>0</td><td>0</td><td>0</td><td>Blocks movement and sight; cannot be attacked</td></tr>
+      </tbody></table></div>
+    <p>Groups the rules refer to:</p>
+    <ul>
+      <li><strong>Mounts</strong> (a wizard can ride them): Horse, Unicorn, Centaur, Pegasus, Gryphon, Manticore.</li>
+      <li><strong>Flyers</strong>: Pegasus, Gryphon, Manticore, Bat, the three dragons, Harpy, Eagle, Vampire, Ghost.</li>
+      <li><strong>Undead</strong>: Vampire, Ghost, Spectre, Wraith, Skeleton, Zombie, and any creature raised by Raise Dead.</li>
+    </ul>
+    <h3 id="casting-spells">Casting spells</h3>
+    <h4 id="casting-chance">Casting chance</h4>
+    <p>A spell's chance is worked out when it is cast, from:</p>
+    <ul>
+      <li>the spell's base chance, 0-9 (shown as 10%-100%);</li>
+      <li>plus the <strong>world balance</strong> bonus: if the world leans to Law and the spell is lawful, or the world leans to Chaos and the spell is chaotic, add a quarter of the balance (rounded down);</li>
+      <li>plus the wizard's ability;</li>
+      <li>capped at 9 (100%).</li>
+    </ul>
+    <p>The spell works if a roll is at most the chance, that is with (chance + 1) in 10. Neutral spells never get a balance bonus, and a spell of the other alignment is not penalised.</p>
+    <h4 id="the-world-balance">The world balance</h4>
+    <p>The balance starts at 0. Every spell that works adds its alignment to the balance:</p>
+    <ul>
+      <li>−2 to +2 for creatures and most spells;</li>
+      <li>+2 for Law-1 and +4 for Law-2;</li>
+      <li>−2 for Chaos-1 and −4 for Chaos-2.</li>
+    </ul>
+    <p>The spell menu shows the balance as one symbol per 4 points: "LAW" with ↑s, or "CHAOS" with ∗s. In the spell lists, ↑ marks a lawful spell, ∗ a chaotic one and − a neutral one. The colour of each spell's name shows its current chance.</p>
+    <h4 id="illusions">Illusions</h4>
+    <p>A human can cast any creature as an <strong>illusion</strong>. An illusion always works, and moves and fights like the real thing. But:</p>
+    <ul>
+      <li>Disbelieve destroys it;</li>
+      <li>Subversion always fails on it;</li>
+      <li>it leaves no corpse when it dies.</li>
+    </ul>
+    <p>A computer wizard casts a creature as an illusion 2 times in 10.</p>
+    <h4 id="range-and-line-of-sight">Range and line of sight</h4>
+    <p>Spells that pick a target must be cast within the spell's range (see the distance measure at the top). Most also need <strong>line of sight</strong>. The game draws a straight line, pixel by pixel, from the centre of the caster's square to the centre of the target's. Sight is blocked if the line crosses a lit pixel of any other piece's sprite (its first animation frame).</p>
+    <p>So a thin creature blocks less than a bulky one, and a line can slip past a piece through gaps in its sprite. These pieces never block sight:</p>
+    <ul>
+      <li>Magic Fire;</li>
+      <li>the Ghost and the Wraith;</li>
+      <li>corpses.</li>
+    </ul>
+    <h3 id="the-spells">The spells</h3>
+    <p>The table lists every spell. "Range" is in squares, as the game shows it. "Chance" is the base chance before the balance and ability. "Prio." is the priority that computer wizards use to choose spells (higher first).</p>
+    <div class="table"><table>
+      <thead><tr><th>Spell</th><th>Chance</th><th>Range</th><th>Align</th><th>Prio.</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td>Disbelieve</td><td>100%</td><td>any</td><td>0</td><td>12-21</td><td>Destroys an illusion</td></tr>
+        <tr><td><em>Creatures</em></td><td>see above</td><td>1</td><td>see above</td><td>18</td><td>Puts a creature on an adjacent square</td></tr>
+        <tr><td>Gooey Blob</td><td>90%</td><td>6</td><td>−1</td><td>18</td><td>Puts a blob on a square</td></tr>
+        <tr><td>Magic Fire</td><td>80%</td><td>6</td><td>−1</td><td>18</td><td>Puts a fire on a square</td></tr>
+        <tr><td>Magic Wood</td><td>80%</td><td>8</td><td>+1</td><td>17</td><td>Up to 8 trees, placed automatically</td></tr>
+        <tr><td>Shadow Wood</td><td>40%</td><td>8</td><td>−1</td><td>18</td><td>Up to 8 trees, placed by the caster</td></tr>
+        <tr><td>Magic Castle</td><td>50%</td><td>8</td><td>+1</td><td>23</td><td>One castle</td></tr>
+        <tr><td>Dark Citadel</td><td>50%</td><td>8</td><td>−1</td><td>23</td><td>One citadel</td></tr>
+        <tr><td>Wall</td><td>80%</td><td>6</td><td>0</td><td>12</td><td>Up to 4 wall squares</td></tr>
+        <tr><td>Magic Bolt</td><td>100%</td><td>6</td><td>0</td><td>18</td><td>Attacks one piece (strength 3)</td></tr>
+        <tr><td>Lightning</td><td>100%</td><td>4</td><td>0</td><td>18</td><td>Attacks one piece (strength 6)</td></tr>
+        <tr><td>Vengeance</td><td>80%</td><td>any</td><td>−1</td><td>12</td><td>Destroys one creature, or a wizard's creations</td></tr>
+        <tr><td>Decree</td><td>80%</td><td>any</td><td>+1</td><td>12</td><td>As Vengeance</td></tr>
+        <tr><td>Dark Power</td><td>50%</td><td>any</td><td>−2</td><td>11</td><td>As Vengeance, three times</td></tr>
+        <tr><td>Justice</td><td>50%</td><td>any</td><td>+2</td><td>11</td><td>As Vengeance, three times</td></tr>
+        <tr><td>Magic Shield</td><td>70%</td><td>self</td><td>+1</td><td>23</td><td>+2 defence</td></tr>
+        <tr><td>Magic Armour</td><td>40%</td><td>self</td><td>+1</td><td>23</td><td>+4 defence</td></tr>
+        <tr><td>Magic Sword</td><td>40%</td><td>self</td><td>+1</td><td>16</td><td>+4 combat, can hit undead</td></tr>
+        <tr><td>Magic Knife</td><td>70%</td><td>self</td><td>+1</td><td>16</td><td>+2 combat, can hit undead</td></tr>
+        <tr><td>Magic Bow</td><td>50%</td><td>self</td><td>+1</td><td>17</td><td>Ranged combat 3, range 6</td></tr>
+        <tr><td>Magic Wings</td><td>50%</td><td>self</td><td>0</td><td>14</td><td>Fly up to 6 squares</td></tr>
+        <tr><td>Shadow Form</td><td>70%</td><td>self</td><td>0</td><td>18</td><td>+3 defence, move 3, until the next attack</td></tr>
+        <tr><td>Law-1</td><td>80%</td><td>self</td><td>+2</td><td>5</td><td>Shifts the balance to Law</td></tr>
+        <tr><td>Law-2</td><td>60%</td><td>self</td><td>+4</td><td>6</td><td>Shifts the balance further to Law</td></tr>
+        <tr><td>Chaos-1</td><td>80%</td><td>self</td><td>−2</td><td>5</td><td>Shifts the balance to Chaos</td></tr>
+        <tr><td>Chaos-2</td><td>60%</td><td>self</td><td>−4</td><td>6</td><td>Shifts the balance further to Chaos</td></tr>
+        <tr><td>Subversion</td><td>100%</td><td>7</td><td>0</td><td>18</td><td>Takes over an enemy creature</td></tr>
+        <tr><td>Raise Dead</td><td>50%</td><td>4</td><td>−1</td><td>18</td><td>Brings a corpse back as your undead creature</td></tr>
+        <tr><td>Turmoil</td><td>100%</td><td>self</td><td>−1</td><td>17</td><td>Scatters every piece on the board</td></tr>
+      </tbody></table></div>
+    <h4 id="creature-spells">Creature spells</h4>
+    <p>The creature appears on a square next to the caster (range 1, diagonals included). The square must be empty or hold a corpse, and must be in sight. A creature cast on a corpse stands on it; the corpse comes back into view if the creature later dies without leaving a corpse of its own.</p>
+    <p><strong>Gooey Blob</strong> and <strong>Magic Fire</strong> are cast the same way, but up to 6 squares away.</p>
+    <h4 id="disbelieve">Disbelieve</h4>
+    <p>Target any creature, anywhere: no range or sight needed. If it is an illusion, it explodes and the spell succeeds; if it is real, the spell fails. Either way the creature is marked as tested, so computer wizards won't try to disbelieve it again. Disbelieve is never used up.</p>
+    <h4 id="magic-wood-shadow-wood-magic-castle-and-dark-citadel">Magic Wood, Shadow Wood, Magic Castle and Dark Citadel</h4>
+    <p><strong>Magic Wood</strong> places up to 8 trees automatically, on the free squares nearest the caster that are in range and in sight. <strong>Shadow Wood</strong>'s 8 trees are placed by hand.</p>
+    <p>For both woods, a tree:</p>
+    <ul>
+      <li>must go on an empty square;</li>
+      <li>cannot go next to another tree of either kind.</li>
+    </ul>
+    <p><strong>Magic Castle</strong> and <strong>Dark Citadel</strong> place one building on an empty square in range and in sight.</p>
+    <h4 id="wall">Wall</h4>
+    <p>Up to 4 wall squares, each on an empty square in range and in sight. A wall cannot go next to the caster.</p>
+    <h4 id="magic-bolt-and-lightning">Magic Bolt and Lightning</h4>
+    <p>Target any piece but the caster, in range and in sight. The hit kills if:</p>
+    <p class="formula">3 (Magic Bolt) or 6 (Lightning) + a roll ≥ the target's defence + a roll</p>
+    <p>A wizard's shield or armour counts towards their defence. These pieces are immune:</p>
+    <ul>
+      <li>Magic Fire;</li>
+      <li>castles and citadels;</li>
+      <li>walls.</li>
+    </ul>
+    <p>A wizard hit this way dies. A creature or tree hit this way vanishes, leaving no corpse. If a wizard was riding it or sheltering in it, that wizard is left standing on the square. Bolts work on undead as well.</p>
+    <h4 id="vengeance-decree-dark-power-and-justice">Vengeance, Decree, Dark Power and Justice</h4>
+    <p>These first need the casting roll. Then the caster picks a target (three targets for Dark Power and Justice): any creature or wizard on the board. No range or line of sight is needed, but objects can't be picked (blobs, fire, trees, castles, walls).</p>
+    <p>Each target resists if a roll is at most its magic resistance, that is with (magic resistance + 1) in 10. If it doesn't resist:</p>
+    <ul>
+      <li>a <strong>creature</strong> is destroyed, with no corpse. If it was standing on a corpse, the corpse rises in its place, as a living creature with the destroyed creature's owner. A wizard riding it is left on the square.</li>
+      <li>a <strong>wizard</strong> survives, but every creature and object they own vanishes.</li>
+    </ul>
+    <h4 id="upgrades-shield-armour-sword-knife-bow-wings-shadow-form">Upgrades: Shield, Armour, Sword, Knife, Bow, Wings, Shadow Form</h4>
+    <p>These affect only the caster; see <a href="#upgrades">Upgrades</a>. A computer wizard won't cast one they already have.</p>
+    <h4 id="law-and-chaos">Law and Chaos</h4>
+    <p>These spells do nothing but move the world balance when they work.</p>
+    <h4 id="subversion">Subversion</h4>
+    <p>Target an enemy creature in range and in sight, with no wizard riding it. The spell's own casting chance doesn't matter. The creature changes sides if a roll is at most its magic resistance, that is with (magic resistance + 1) in 10. So the <em>more</em> magic resistance a creature has, the easier it is to subvert (see <a href="#quirks-of-the-original">Quirks</a>). Illusions can never be subverted.</p>
+    <h4 id="raise-dead">Raise Dead</h4>
+    <p>Target a corpse in range and in sight. If the spell works, the creature comes back to life, owned by the caster, with its full statistics. It is now <strong>undead</strong>: only the undead and wizards with magic weapons can attack it, and it leaves no corpse when it dies.</p>
+    <h4 id="turmoil">Turmoil</h4>
+    <p>If it works, every piece on the board moves to a random empty square: wizards, creatures, corpses, trees, castles, walls, blobs and fires alike. Each piece moves once. The random squares are only ever the 64 squares in every other column of rows 3-10.</p>
+    <p>In the original the spell often hangs the game, because its random numbers can only reach about a third of those squares; once they are all taken it searches forever. Chaos Online doesn't hang.</p>
+    <h3 id="movement">Movement</h3>
+    <p>During their movement phase, a wizard selects their pieces one at a time. Each piece can move once a turn. A wizard can select:</p>
+    <ul>
+      <li>their wizard;</li>
+      <li>any creature they own;</li>
+      <li>their Shadow Wood trees.</li>
+    </ul>
+    <p>Blobs, fire, Magic Wood, castles and walls never move.</p>
+    <h4 id="walking">Walking</h4>
+    <p>A walking piece has <strong>movement × 2</strong> points:</p>
+    <ul>
+      <li>a step along a row or column costs 2;</li>
+      <li>a diagonal step costs 3.</li>
+    </ul>
+    <p>The piece keeps going while it has points left, and it may always take a step that costs more than it has left. So a piece with movement 1 takes one step in any direction. One with movement 3 can take 3 straight steps, 2 diagonal ones, or a mix.</p>
+    <h4 id="flying">Flying</h4>
+    <p>A flyer, or a wizard with Magic Wings, instead picks any square within <strong>movement × 2 + 1</strong> (13 for wings, which is 6 squares) and goes straight there, over anything in the way. Its move ends when it lands.</p>
+    <h4 id="engagement">Engagement</h4>
+    <p>When a piece is selected next to an enemy creature or wizard, it is <strong>engaged</strong> unless it passes a manoeuvre test. It breaks free if a roll + 2 is below its manoeuvre, that is with (manoeuvre − 2) in 10. A piece with manoeuvre 2 or less never breaks free.</p>
+    <ul>
+      <li>An engaged piece can't move. It can only attack a neighbouring enemy, or stop.</li>
+      <li>A walking piece that steps next to an enemy becomes engaged at once, with no test. Its walk ends there, but it may still attack.</li>
+      <li>A mount carrying a wizard skips the test when selected.</li>
+    </ul>
+    <h4 id="what-a-piece-can-move-into">What a piece can move into</h4>
+    <div class="table"><table>
+      <thead><tr><th>Destination</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>Empty square, or a corpse</td><td>The piece moves there</td></tr>
+        <tr><td>Enemy creature, wizard or Shadow Wood</td><td>Attack</td></tr>
+        <tr><td>Enemy Gooey Blob</td><td>Attack</td></tr>
+        <tr><td>Magic Wood</td><td>A wizard on foot shelters in it if it is empty; otherwise attack</td></tr>
+        <tr><td>Your own mount, with no rider</td><td>Your wizard climbs on</td></tr>
+        <tr><td>Your own Magic Castle or Dark Citadel</td><td>Your wizard shelters in it</td></tr>
+        <tr><td>Anything else</td><td>The move isn't allowed</td></tr>
+      </tbody></table></div>
+    <p>"Anything else" includes:</p>
+    <ul>
+      <li>your own pieces;</li>
+      <li>walls;</li>
+      <li>Magic Fire;</li>
+      <li>other wizards' castles.</li>
+    </ul>
+    <h4 id="riding-and-sheltering">Riding and sheltering</h4>
+    <p>A mount carries its rider. The mount moves, with its own movement and flying, and the wizard goes with it.</p>
+    <p>When you select a mount your wizard is riding, the game asks "Dismount wizard?".</p>
+    <ul>
+      <li>Yes: the wizard steps off one square.</li>
+      <li>No: the mount moves with the wizard on it.</li>
+    </ul>
+    <p>A wizard in a wood or castle leaves by being selected, and moves out one square.</p>
+    <p>While riding or sheltering, the wizard is hidden. Attacks hit the mount, tree or castle. If that is destroyed, the wizard is left standing on the square, unhurt.</p>
+    <h3 id="combat">Combat</h3>
+    <h4 id="close-combat">Close combat</h4>
+    <p>A piece attacks by moving into an enemy. The attack kills if:</p>
+    <p class="formula">attacker's combat + weapon bonus + a roll  &gt;  defender's defence + armour bonus + a roll</p>
+    <p>The "bonus" terms apply only to wizards:</p>
+    <ul>
+      <li>the weapon bonus is +2 for a Magic Knife and +4 for a Magic Sword;</li>
+      <li>the armour bonus is +2 for a Magic Shield or +4 for Magic Armour, plus 3 more in Shadow Form.</li>
+    </ul>
+    <p>The defender never strikes back.</p>
+    <p>Chance to kill, by attack minus defence:</p>
+    <div class="table"><table>
+      <thead><tr><th>Attack − defence</th><th>−6</th><th>−5</th><th>−4</th><th>−3</th><th>−2</th><th>−1</th><th>0</th><th>+1</th><th>+2</th><th>+3</th><th>+4</th><th>+5</th><th>+6</th></tr></thead>
+      <tbody>
+        <tr><td>Chance</td><td>6%</td><td>10%</td><td>15%</td><td>21%</td><td>28%</td><td>36%</td><td>45%</td><td>55%</td><td>64%</td><td>72%</td><td>79%</td><td>85%</td><td>90%</td></tr>
+      </tbody></table></div>
+    <ul>
+      <li><strong>If the attack kills</strong>, the attacker moves into the square (Shadow Wood stays put), and its move ends.
+        <ul>
+          <li>If the target was carrying a wizard, or sheltering one, the wizard is revealed and the attacker stays where it was.</li>
+          <li>If the target was a Gooey Blob that had engulfed a creature, that creature is set free.</li>
+        </ul>
+      </li>
+      <li><strong>If the attack fails</strong>, the attacker's move ends where it is.</li>
+    </ul>
+    <p>Either way, a piece with a ranged attack may then shoot.</p>
+    <p><strong>Undead</strong>: a piece that isn't undead can't attack an undead piece ("Undead - cannot be attacked"), unless it is a wizard with a Magic Knife, Sword or Bow. Undead can attack anything.</p>
+    <h4 id="ranged-combat">Ranged combat</h4>
+    <p>After a piece with a ranged attack finishes moving (or chooses not to move), it may shoot once.</p>
+    <p>The target must be within <strong>range × 2</strong> (the distance measure) and in line of sight. The shot uses the same formula as close combat, with ranged combat in place of combat. The shooter never moves into the square.</p>
+    <p>How each shooter's shot looks:</p>
+    <ul>
+      <li>dragons breathe fire;</li>
+      <li>the Manticore shoots spines;</li>
+      <li>everything else fires an arrow or bolt.</li>
+    </ul>
+    <p>Only these pieces can be harmed by a shot:</p>
+    <ul>
+      <li>creatures, including a Gooey Blob;</li>
+      <li>trees;</li>
+      <li>wizards.</li>
+    </ul>
+    <p>Shooting at a corpse, Magic Fire, a castle or a wall does nothing. The undead rule above applies to shots too.</p>
+    <h3 id="death-corpses-and-the-undead">Death, corpses and the undead</h3>
+    <h4 id="corpses">Corpses</h4>
+    <p>When a creature is killed in combat, it leaves a <strong>corpse</strong> on its square, which blocks nothing. These creatures leave no corpse:</p>
+    <ul>
+      <li>illusions;</li>
+      <li>undead (Vampire to Zombie, and raised creatures).</li>
+    </ul>
+    <p>A creature killed by a spell or by fire leaves no corpse either.</p>
+    <p>A corpse can be:</p>
+    <ul>
+      <li>walked over;</li>
+      <li>covered by a new creature, blob or fire;</li>
+      <li>raised with Raise Dead.</li>
+    </ul>
+    <h4 id="a-wizard-s-death">A wizard's death</h4>
+    <p>A wizard dies when:</p>
+    <ul>
+      <li>they lose a combat;</li>
+      <li>a Magic Bolt or Lightning gets through;</li>
+      <li>a Gooey Blob or Magic Fire spreads onto them (on foot, or on a mount), with no roll to survive.</li>
+    </ul>
+    <p>When a wizard dies, everything they own vanishes:</p>
+    <ul>
+      <li>creatures, woods, castles, walls, blobs and fires;</li>
+      <li>creatures they have raised from the dead.</li>
+    </ul>
+    <p>Corpses stay. Wizards riding or sheltering in a vanished piece are revealed. Creatures trapped in the dead wizard's blobs go free. Their own creatures trapped in other wizards' blobs vanish.</p>
+    <p>The same disappearance happens when Vengeance, Decree, Dark Power or Justice gets through to a wizard, but that wizard lives on.</p>
+    <h3 id="fire-blobs-woods-and-castles">Fire, blobs, woods and castles</h3>
+    <h4 id="spreading">Spreading</h4>
+    <p>Each turn, before the movement phase, every Gooey Blob and Magic Fire square that wasn't created by spreading this turn gets a turn.</p>
+    <p><strong>1. It tries to spread.</strong> A fire tries 9 times in 10. A blob tries 72 times in 100: 9 in 10, and then 8 in 10. It picks one of the 8 neighbouring squares at random. What happens depends on what is there:</p>
+    <div class="table"><table>
+      <thead><tr><th>Neighbour</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>Empty square or corpse</td><td>Spreads onto it (a corpse there is lost)</td></tr>
+        <tr><td>An enemy wizard, on foot or riding</td><td>The wizard dies; it spreads onto the square</td></tr>
+        <tr><td>The owner's own wizard, or one of the owner's pieces</td><td>Nothing, and step 2 is skipped</td></tr>
+        <tr><td>Magic Wood, castle, citadel, wall, fire</td><td>No spread</td></tr>
+        <tr><td>An enemy creature, for fire</td><td>The creature burns if 5 + a roll &lt; its defence + a roll; then it spreads</td></tr>
+        <tr><td>An enemy creature, for a blob</td><td>The blob engulfs it; it spreads</td></tr>
+        <tr><td>The edge of the board</td><td>Nothing, and step 2 is skipped</td></tr>
+      </tbody></table></div>
+    <p>An engulfed creature isn't killed. It waits under the blob, out of play, and comes back, still owned by its owner, when:</p>
+    <ul>
+      <li>the blob dies out;</li>
+      <li>the blob is killed;</li>
+      <li>the blob's owner dies.</li>
+    </ul>
+    <p><strong>2. It may die out.</strong></p>
+    <ul>
+      <li>A fire disappears 2 times in 10.</li>
+      <li>A blob disappears 6 times in 100: 2 in 10, and then 3 in 10.</li>
+    </ul>
+    <p>Whatever was under it (an engulfed creature) is left behind.</p>
+    <h4 id="magic-wood-gifts">Magic Wood gifts</h4>
+    <p>Each turn, every wizard sheltering in a Magic Wood has a 4 in 10 chance of a new random spell, which can be Turmoil. When it happens, that tree disappears and the wizard is left standing on its square.</p>
+    <h4 id="castles-and-citadels">Castles and citadels</h4>
+    <p>Each turn every Magic Castle and Dark Citadel has a 2 in 10 chance of vanishing, leaving any wizard in it on the square. A wizard in a castle can't be attacked or hit by any spell.</p>
+    <h4 id="woods">Woods</h4>
+    <p><strong>Magic Wood</strong> has defence 5. It can be attacked, and a Magic Bolt or Lightning can destroy it. While a tree shelters a wizard, enemies attack the tree.</p>
+    <p><strong>Shadow Wood</strong> has combat 2 and defence 4. It never moves, but each turn its owner can make each tree attack a neighbouring enemy. Neither kind of tree can be targeted by Vengeance, Decree, Dark Power or Justice.</p>
+    <h3 id="computer-wizards">Computer wizards</h3>
+    <p>Computer wizards play by these rules.</p>
+    <p><strong>Choosing a spell.</strong> At the start of each casting phase, Disbelieve gets a fresh random priority (12-21). The spell list is sorted by priority, and the computer tries each spell in turn, casting the first one it can find a use for:</p>
+    <ul>
+      <li>a creature or blob needs a free square near its chosen target;</li>
+      <li>a Magic Bolt needs a target in range and in sight;</li>
+      <li>an upgrade needs to be one the wizard doesn't already have;</li>
+      <li>a castle needs the wizard not to be in one already;</li>
+      <li>and so on.</li>
+    </ul>
+    <p>Woods and walls are placed on the squares nearest the wizard, or nearest the target.</p>
+    <p><strong>Choosing targets.</strong> The computer scores enemy pieces by their value (the table above), with nearer pieces scoring higher. It scores enemy wizards by the total value of their armies.</p>
+    <ul>
+      <li>Creatures and attack spells go for the best-scoring target.</li>
+      <li>Subversion and Disbelieve skip creatures they have already tested.</li>
+      <li>A shooter goes for the best target its shot can harm. Unless it is a wizard, it won't shoot at undead.</li>
+    </ul>
+    <p><strong>Moving.</strong> The computer moves its wizard first, then every piece it owns, in board order (left to right, top to bottom).</p>
+    <ul>
+      <li>A computer wizard that still has creatures moves defensively. It steps into a castle or a Magic Wood if one is next to it, otherwise onto its own free mount, otherwise to the neighbouring square with the least danger around it. The danger is the total score of the enemies near that square.</li>
+      <li>A wizard on a flying mount, or with wings, flies to the safest square in reach.</li>
+      <li>Its creatures head for the most attractive enemy creature. If that creature's wizard is nearer, they go for the wizard instead.</li>
+      <li>From the 7th turn on, a computer wizard with no creatures left goes on the attack. Its wizard and anything it still has head for the strongest enemy wizard.</li>
+    </ul>
+    <p>The computer level only affects the wizards' starting statistics and number of spells (see <a href="#wizards">Wizards</a>). It doesn't change how they think.</p>
+    <h3 id="quirks-of-the-original">Quirks of the original</h3>
+    <p>These are part of how Chaos plays, and Chaos Online keeps them (apart from the Turmoil hang):</p>
+    <ul>
+      <li><strong>Humans roll twice for many spells.</strong> A human's chosen spell gets its casting roll at the start of the casting step. Many spell routines then roll again, and the second roll decides:
+        <ul>
+          <li>upgrades;</li>
+          <li>Law and Chaos;</li>
+          <li>Magic Wood;</li>
+          <li>Vengeance, Decree, Dark Power and Justice;</li>
+          <li>Raise Dead;</li>
+          <li>Turmoil.</li>
+        </ul>
+        <p>The chance of success is the same, but each successful roll moves the world balance. So a human's Law-2 that passes both rolls moves it by 8, not 4. Computer wizards roll once.</p>
+      </li>
+      <li><strong>Subversion favours magic resistance.</strong> The test is "a roll below magic resistance + 1", the same test Vengeance uses to <em>resist</em>. A Faun (8) or Manticore (8) is easy to subvert, and a Horse (1) is hard.</li>
+      <li><strong>Fire burns the strong.</strong> Magic Fire consumes a creature only when 5 + a roll is <em>below</em> the creature's defence + a roll. It burns a creature with defence 1 only about 1 time in 7, but a Dragon (defence 8-9) about 3 times in 4. Wizards in its way die regardless.</li>
+      <li><strong>Vengeance raises the dead.</strong> A creature that Vengeance (or Decree, Dark Power, Justice) destroys while standing on a corpse is replaced by the corpse's creature, alive, with the destroyed creature's owner.</li>
+      <li><strong>No Turmoil at the start.</strong> Spell numbers at the start are drawn from 2-63, so Turmoil (64-65) only comes from Magic Wood.</li>
+      <li><strong>Turmoil hangs.</strong> Its random numbers come from the Z80's R register, so while it runs they reach only about 25 of its 64 squares. Once those are full it searches forever and the game freezes, which happens on most boards with 30 or more pieces. Chaos Online leaves a piece where it is when no square is free, so it never hangs.</li>
+      <li><strong>The balance is one byte.</strong> The world balance runs from −128 to +127. Pushing it past either end flips it to the other side. Reaching that takes dozens of Law or Chaos spells.</li>
+      <li><strong>The computer's Turmoil test reads the wrong byte.</strong> When deciding whether to cast Turmoil, the computer adds the ROM byte at <code>$2100</code> to each target's score instead of keeping a running total (<code>LD HL,($A172)</code> for <code>LD HL,$A172</code>).</li>
+      <li><strong>Army values are off by two.</strong> When it rates a wizard's army, the computer looks up each piece's value two entries along the table. So, for example, a Goblin counts as a Faun would.</li>
+    </ul>
+  </article>
+</main>
+{% endblock %}
