@@ -475,6 +475,69 @@ volumeSlider.onchange = () => {
 };
 
 // ---------------------------------------------------------------------------
+// on-screen keys, for touch screens: each button presses and releases a
+// Spectrum key just as the keyboard does (holding one repeats it)
+const pad = $('pad');
+if (pad) {
+  const key = (k, label, sub, cls) => ({ code: typeof k === 'number' ? k : k.charCodeAt(0), label, sub, cls });
+  const groups = [
+    ['pad-grid dpad', [key('Q', '↖'), key('W', '↑'), key('E', '↗'), key('A', '←'),
+      key('S', 'Select', null, 'select'), key('D', '→'), key('Z', '↙'), key('X', '↓'), key('C', '↘')]],
+    ['pad-grid actions', [key('K', 'K', 'cancel'), key('I', 'I', 'info'), key('0', '0', 'end turn'),
+      key('Y', 'Y', 'yes'), key('N', 'N', 'no'), { toggle: true, label: 'ABC', sub: 'letters' }]],
+    ['pad-row digits', [...'1234567890'].map(d => key(d, d))],
+    ['pad-row letters hidden', [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(l => key(l, l)).concat(
+      [key(0x0C, '⌫', null, 'wide'), key(0x20, 'Space', null, 'wide'), key(0x0D, 'Enter', null, 'wide')])],
+  ];
+  for (const [cls, keys] of groups) {
+    const div = document.createElement('div');
+    div.className = cls;
+    for (const k of keys) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = k.label;
+      if (k.sub) { const s = document.createElement('small'); s.textContent = k.sub; b.append(s); }
+      if (k.cls) b.className = k.cls;
+      if (k.toggle) b.dataset.toggle = '1'; else b.dataset.code = k.code;
+      div.append(b);
+    }
+    pad.append(div);
+  }
+  const letters = pad.querySelector('.letters');
+  const release = b => {
+    if (!b.classList.contains('pressed')) return;
+    b.classList.remove('pressed');
+    keyUp(+b.dataset.code);
+  };
+  pad.addEventListener('pointerdown', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    e.preventDefault();
+    if (b.dataset.toggle) {
+      b.classList.toggle('on', letters.classList.toggle('hidden') === false);
+      return;
+    }
+    b.setPointerCapture(e.pointerId);
+    b.classList.add('pressed');
+    keyDown(+b.dataset.code);
+  });
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+    pad.addEventListener(type, e => { const b = e.target.closest('button'); if (b) release(b); });
+  }
+  pad.addEventListener('contextmenu', e => e.preventDefault());
+
+  // shown by default on touch screens; the choice is remembered in this browser
+  const padBox = $('pad-on');
+  const coarse = window.matchMedia('(pointer: coarse)').matches;
+  padBox.checked = loadSetting('chaos.pad', coarse ? '1' : '0') === '1';
+  pad.classList.toggle('hidden', !padBox.checked);
+  padBox.onchange = () => {
+    pad.classList.toggle('hidden', !padBox.checked);
+    saveSetting('chaos.pad', padBox.checked ? '1' : '0');
+  };
+}
+
+// ---------------------------------------------------------------------------
 // chat
 // Watchers who aren't logged in name themselves; the name is remembered in
 // this browser.

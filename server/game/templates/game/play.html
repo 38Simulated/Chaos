@@ -4,6 +4,7 @@
 {% block indexing %}<meta name="robots" content="noindex">{% endblock %}
 {% block body %}
 <div class="play">
+  <div class="screen-col">
   <section class="screen-wrap">
     <canvas id="screen" width="320" height="240" tabindex="0"></canvas>
     <div id="overlay" class="overlay"></div>
@@ -14,6 +15,10 @@
       <p id="catchup-count" class="hint"></p>
     </div>
   </section>
+  {% if not watching %}
+  <div id="pad" class="pad hidden" aria-label="On-screen keys"></div>
+  {% endif %}
+  </div>
   <aside class="side">
     <div class="box">
       {% if watching %}
@@ -65,6 +70,7 @@
       <p><kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> <kbd>A</kbd> <kbd>D</kbd> <kbd>Z</kbd><kbd>X</kbd><kbd>C</kbd> move cursor
         &middot; <kbd>S</kbd> select &middot; <kbd>K</kbd> cancel &middot; <kbd>I</kbd> info
         &middot; <kbd>1</kbd>&ndash;<kbd>8</kbd> show a wizard's creations &middot; <kbd>0</kbd> end turn</p>
+      <label class="check pad-check"><input type="checkbox" id="pad-on"> On-screen keys (for phones and tablets)</label>
       {% endif %}
       <div class="sound">
         <label class="check"><input type="checkbox" id="sound" checked> Sound</label>
