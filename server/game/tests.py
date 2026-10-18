@@ -183,6 +183,15 @@ class ReplayTests(TestCase):
         self.assertEqual(data['players'], [{'seat': 0, 'name': 'Host', 'registered': False},
                                            {'seat': 1, 'name': 'Guest', 'registered': False}])
 
+    def test_replay_has_the_time_between_events(self):
+        game, host, _ = self.finished(False)
+        start = timezone.now()
+        for seq, seconds in ((8, 0), (9, 1.5), (10, 1.75)):
+            Event.objects.filter(game=game, seq=seq).update(at=start + timedelta(seconds=seconds))
+        waits = [e['wait'] for e in host.get(f'/g/{game.code}/replay.json').json()['events']]
+        # events 1-7 were recorded before times were kept
+        self.assertEqual(waits, [None] * 8 + [1500, 250])
+
     def test_create_sets_the_replay_choice(self):
         client = Client()
         private = create_game(client)
@@ -678,6 +687,8 @@ class WebSocketTests(TransactionTestCase):
         self.assertNotContains(Client().get('/'), f'/w/{game.watch_id}/')
         self.report(host, game.code, {'type': 'key', 'kind': 'down', 'code': 0x31})
         self.assertContains(Client().get('/'), f'/w/{game.watch_id}/')
+        # the key's time is kept for replays
+        self.assertIsNotNone(game.events.latest('seq').at)
 
     def test_stranger_is_refused(self):
         game = create_game(Client())

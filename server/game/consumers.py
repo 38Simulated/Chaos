@@ -249,8 +249,9 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
                     if game.status not in (Game.PLAYING, Game.FINISHED):
                         return None
                     seq = (game.events.aggregate(m=Max('seq'))['m'] or 0) + 1
-                    ev = Event.objects.create(game=game, seq=seq, seat=seat, kind=kind, code=code)
-                    Game.objects.filter(pk=game.pk).update(last_move=timezone.now())
+                    now = timezone.now()
+                    ev = Event.objects.create(game=game, seq=seq, seat=seat, kind=kind, code=code, at=now)
+                    Game.objects.filter(pk=game.pk).update(last_move=now)
                     return ev.as_dict()
             except IntegrityError:
                 continue

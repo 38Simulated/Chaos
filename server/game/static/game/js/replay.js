@@ -21,8 +21,17 @@ const beeper = new Beeper();
 let engine = null, input = null, renderer = null;
 let speed = 1, playing = true, ended = false;
 let seekTarget = null;    // replay fast, without waits, up to this event
+// The log's events, handed to the engine one at a time, as timed by `timing`:
+// 'real' waits as long as the players did before each event (`wait`, in ms,
+// recorded by the server; at most `maxWait`); a number of seconds is a fixed
+// pause before each key press, for games recorded without times or to
+// hurry along. Waits count engine frames, so they follow the speed setting.
+const timed = data.events.some(e => e.wait !== null && e.wait !== undefined);
+let events = [], released = 0, sinceLast = 0, sinceDown = 0;
+let timing = 'real', pauseFrames = 25, maxWait = 5000;
 let wizards = {};         // seat -> {name, cpu, dead}, as the engine set them up
 let turnSeat = null;
+let over = false;         // the game has ended (its winner screen may wait for a key the log hasn't got)
 
 // Build a fresh engine on the whole log; replay up to `target` at once.
 function load(target = 0) {
@@ -35,16 +44,18 @@ function load(target = 0) {
   input = new InputStream();
   input.hostSeat = data.host_seat;
   for (const s of data.human_seats) input.seats.set(s, true);
-  for (const e of data.events) {
-    input.push(e.kind === 'takeover' ? { type: 'takeover', seat: e.seat } : { type: e.kind, seat: e.seat, code: e.code });
-  }
+  events = data.events.map(e => ({
+    ev: e.kind === 'takeover' ? { type: 'takeover', seat: e.seat } : { type: e.kind, seat: e.seat, code: e.code },
+    wait: e.wait ?? null,
+  }));
+  released = 0; sinceLast = 0; sinceDown = 0;
   const consume = input.consume.bind(input);
   input.consume = () => {
     const ev = consume();
     if (seekTarget !== null && input.consumed >= seekTarget) { seekTarget = null; engine.fast = false; }
     return ev;
   };
-  wizards = {}; turnSeat = null; ended = false;
+  wizards = {}; turnSeat = null; ended = false; over = false;
   showRounds(null);
   overlay.textContent = '';
   engine = new Chaos(gameImage(), { input, beeper, seed: data.seed, rules: data.rules, onEvent });
@@ -61,6 +72,32 @@ function seek(target) {
   if (target < input.consumed) { load(target); return; }
   seekTarget = target > input.consumed ? target : null;
   engine.fast = seekTarget !== null;
+  release(target);
+}
+
+// Hand the engine the events before `upTo`, without pausing.
+function release(upTo) {
+  while (released < upTo) input.push(events[released++].ev);
+}
+
+// Once a frame: hand the engine the events whose time has come.
+function releaseNext() {
+  sinceLast++; sinceDown++;
+  while (released < total) {
+    const { ev, wait } = events[released];
+    const real = timing === 'real' && wait !== null;
+    if (seekTarget === null) {
+      if (real) { if (sinceLast * 20 < Math.min(wait, maxWait)) return; }
+      else if (ev.type === 'down' && sinceDown < pauseFrames) return;
+    }
+    input.push(ev);
+    released++;
+    sinceLast = 0;
+    if (ev.type === 'down') {
+      sinceDown = 0;
+      if (!real) return;    // one key press a frame at most
+    }
+  }
 }
 
 // The game ends after a fixed number of turns (twice the wizards, plus 15).
@@ -81,6 +118,7 @@ function onEvent(ev) {
     showRounds(ev);
   } else if (ev.type === 'gameover') {
     turnSeat = null;
+    over = true;
     showRounds(null);
   } else if (ev.type === 'ended') {
     ended = true;
@@ -153,6 +191,7 @@ function startTicker() {
     if (owed < 1 || !playing) { running = false; return; }
     owed--;
     engine.tick();
+    releaseNext();
     renderer.flashFrame = (renderer.flashFrame + 1) & 31;
     chan.port2.postMessage(0);
   };
@@ -169,7 +208,7 @@ function startTicker() {
     const done = ended ? total : input.consumed;
     $('bar').style.width = (total ? 100 * done / total : 100) + '%';
     $('position').textContent = `${done.toLocaleString()} of ${total.toLocaleString()} inputs`;
-    if (!ended) {
+    if (!ended && !over) {
       const turn = turnSeat !== null ? `${wizardName(turnSeat)}'s turn` : 'Setting up';
       setStatus(seekTarget !== null ? 'Jumping…' : playing ? turn : `Paused: ${turn}`);
     } else {
@@ -185,6 +224,16 @@ $('play').onclick = () => { playing = !playing; updateButtons(); };
 $('restart').onclick = () => { playing = true; load(0); updateButtons(); };
 $('toend').onclick = () => { playing = true; if (!ended) seek(total); updateButtons(); };
 $('speed').onchange = e => { speed = +e.target.value; updateSound(); };
+const timingSelect = $('timing'), maxWaitSelect = $('maxwait');
+function applyTiming() {
+  timing = timingSelect.value;
+  // without times, 'real' falls back on a half-second pause
+  pauseFrames = Math.round((timing === 'real' ? 0.5 : +timing) * 50);
+  maxWait = +maxWaitSelect.value * 1000;
+  $('maxwait-row').classList.toggle('hidden', timing !== 'real');
+}
+timingSelect.onchange = () => { applyTiming(); saveSetting('chaos.replayTiming', timingSelect.value); };
+maxWaitSelect.onchange = () => { applyTiming(); saveSetting('chaos.replayMaxWait', maxWaitSelect.value); };
 $('track').onclick = e => {
   const r = e.currentTarget.getBoundingClientRect();
   playing = true;
@@ -206,6 +255,18 @@ volumeSlider.value = loadSetting('chaos.volume', '50');
 beeper.setVolume(volumeSlider.value / 50);
 function updateSound() { beeper.enabled = soundBox.checked && speed === 1; }
 updateSound();
+// a game recorded without times has no 'As played'
+if (!timed) {
+  timingSelect.querySelector('option[value=real]').remove();
+  $('timing-hint').classList.add('hidden');
+  $('untimed-hint').classList.remove('hidden');
+}
+for (const [select, key, fallback] of [[timingSelect, 'chaos.replayTiming', timed ? 'real' : '0.5'],
+                                       [maxWaitSelect, 'chaos.replayMaxWait', '5']]) {
+  select.value = loadSetting(key, fallback);
+  if (select.selectedIndex < 0) select.value = fallback;
+}
+applyTiming();
 soundBox.onchange = () => { updateSound(); saveSetting('chaos.sound', soundBox.checked ? '1' : '0'); };
 volumeSlider.oninput = () => beeper.setVolume(volumeSlider.value / 50);
 volumeSlider.onchange = () => { saveSetting('chaos.volume', volumeSlider.value); beeper.test(); };

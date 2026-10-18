@@ -368,5 +368,19 @@ def replay_data(request, code=None, watch_id=None):
                     for p in game.players.select_related('user') if p.seat >= 0],
         'survivors': game.survivors,
         'rules': game.rules,
-        'events': [e.as_dict() for e in game.events.all()],
+        'events': _timed_events(game),
     })
+
+
+def _timed_events(game):
+    """The game's events, each with `wait`: the milliseconds since the one
+    before it, or None where a time is missing (events recorded before times
+    were kept, and the first event)."""
+    events, previous = [], None
+    for e in game.events.all():
+        d = e.as_dict()
+        d['wait'] = (round((e.at - previous).total_seconds() * 1000)
+                     if e.at and previous else None)
+        previous = e.at
+        events.append(d)
+    return events
