@@ -37,6 +37,10 @@
       <li><strong>Anyone can watch it live:</strong> the game is listed under <em>Watch live</em> on the front page.
         The host can switch this on or off at any time on the game page.</li>
     </ul>
+    <p><strong>Custom games</strong> (the <em>Custom game</em> button) can also change some of the rules: the
+      number of turns and of spells, every wizard's ability and statistics, Turmoil as a starting spell, the Troll
+      (a creature left out of the original). Everyone in the game, and anyone watching, can see the rules on the game page. The
+      <a href="{% url 'mechanics' %}#custom-games">game mechanics</a> page has the details.</p>
 
     <h3 id="setup">Setting up</h3>
     <p>After the start, the game asks the original's setup questions. The host answers the first two: how many
@@ -59,7 +63,14 @@
       <li><kbd>I</kbd> shows information about the creature under the cursor.</li>
       <li><kbd>1</kbd>&ndash;<kbd>8</kbd> show a wizard's creations on the board.</li>
       <li><kbd>0</kbd> ends your turn (or leaves a menu).</li>
+      <li><kbd>N</kbd>, while choosing a piece to move, puts the cursor on your next piece that hasn't moved.</li>
+      <li><kbd>R</kbd>, while the cursor is on the board, switches the range marks on or off (they start off):
+        they show how far the piece you are moving, or shooting with, or the spell you are casting can reach. The
+        list of keys on the game page says whether they are on, and your choice is remembered.</li>
     </ul>
+    <p>On a phone or tablet, tick <em>On-screen keys</em> under <em>Keys</em> on the game page for buttons
+      under the screen (they come on by themselves on touch screens). <em>ABC</em> opens the letters, for typing
+      your wizard's name.</p>
     <p>Only the player whose turn it is can press keys that count. The status above the <em>Wizards</em> list says
       whose turn it is.</p>
 
@@ -91,7 +102,12 @@
         played (a game with no move for 10 minutes drops off until its next move). Players can share the game with
         <em>Copy watch link</em>. People watching can't play, and the watch link can't be used to join. They can
         chat (their messages are marked <em>watching</em>) unless the host turns off <em>Watchers can chat</em>.</li>
-      <li>When a game is over, <em>Watch the replay</em> plays it back from the start.</li>
+      <li>Finished games that anyone could watch live are listed under <em>Archived games</em> (the link on the
+        <em>Watch live</em> panel), latest first, to watch again.</li>
+      <li>When a game is over, <em>Watch the replay</em> plays it back from the start. You can pause it, speed it
+        up, skip to the end or jump to any point. <em>Timing</em> sets how long it waits between the players'
+        keys: <em>As played</em> keeps the time the players really took (cutting long waits short), or choose a
+        fixed pause. Games played before the timing was recorded always use a fixed pause.</li>
     </ul>
 
     <h3 id="accounts">Accounts</h3>

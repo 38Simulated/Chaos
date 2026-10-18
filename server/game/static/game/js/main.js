@@ -218,7 +218,7 @@ function startEngine(seed, human, events) {
   engine = new Chaos(gameImage(), { input, beeper, seed, rules: cfg.rules, onEvent: onEngineEvent });
   input.engine = engine;
   renderer = new Renderer(canvas, engine.m, engine.spec);
-  renderer.hint = () => engine.rangeHint;
+  renderer.hint = () => showRanges ? engine.rangeHint : null;
   renderSeats();
   if (events.length) {
     input.replaying = true;
@@ -439,6 +439,7 @@ function keyUp(code) {
 const typing = e => e.target.id === 'chatinput' || e.target.id === 'chatname';
 document.addEventListener('keydown', e => {
   if (typing(e)) return;
+  if (rangesKey(e)) return;
   const code = spectrumCode(e);
   if (code === null) return;
   e.preventDefault();
@@ -476,6 +477,34 @@ volumeSlider.onchange = () => {
 };
 
 // ---------------------------------------------------------------------------
+// Range indicators (how far the piece being moved, shooting, or a spell can
+// reach): each browser's own choice, remembered, and off until turned on.
+// The engine works them out in every game; this only decides whether they are
+// drawn. R switches them while the cursor is on the board, where the game
+// ignores R, so it is never sent; elsewhere R is a key like any other (a spell
+// in the spell list, a letter of a name).
+let showRanges = loadSetting('chaos.ranges', '0') === '1';
+// the key lists and the pad's R button say which it is
+function showRangesState() {
+  for (const el of document.querySelectorAll('.ranges-state')) el.textContent = showRanges ? 'ranges on' : 'ranges off';
+  const b = document.querySelector('.pad [data-ranges]');
+  if (b) b.classList.toggle('on', showRanges);
+}
+function setRanges(on) {
+  showRanges = on;
+  showRangesState();
+  saveSetting('chaos.ranges', on ? '1' : '0');
+}
+showRangesState();
+function rangesKey(e) {
+  if (e.key.toUpperCase() !== 'R' || e.ctrlKey || e.metaKey || e.altKey) return false;
+  if (!engine || !(engine.rangeHint || engine.selecting)) return false;
+  e.preventDefault();
+  if (!e.repeat) setRanges(!showRanges);
+  return true;
+}
+
+// ---------------------------------------------------------------------------
 // on-screen keys, for touch screens: each button presses and releases a
 // Spectrum key just as the keyboard does (holding one repeats it)
 const pad = $('pad');
@@ -485,7 +514,8 @@ if (pad) {
     ['pad-grid dpad', [key('Q', '↖'), key('W', '↑'), key('E', '↗'), key('A', '←'),
       key('S', 'Select', null, 'select'), key('D', '→'), key('Z', '↙'), key('X', '↓'), key('C', '↘')]],
     ['pad-grid actions', [key('K', 'K', 'cancel'), key('I', 'I', 'info'), key('0', '0', 'end turn'),
-      key('Y', 'Y', 'yes'), key('N', 'N', 'no'), { toggle: true, label: 'ABC', sub: 'letters' }]],
+      key('Y', 'Y', 'yes'), key('N', 'N', 'no / next'), { ranges: true, label: 'R', sub: 'ranges', subCls: 'ranges-state' },
+      { toggle: true, label: 'ABC', sub: 'letters', cls: 'wide3' }]],
     ['pad-row digits', [...'1234567890'].map(d => key(d, d))],
     ['pad-row letters hidden', [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(l => key(l, l)).concat(
       [key(0x0C, '⌫', null, 'wide'), key(0x20, 'Space', null, 'wide'), key(0x0D, 'Enter', null, 'wide')])],
@@ -497,13 +527,21 @@ if (pad) {
       const b = document.createElement('button');
       b.type = 'button';
       b.textContent = k.label;
-      if (k.sub) { const s = document.createElement('small'); s.textContent = k.sub; b.append(s); }
+      if (k.sub) {
+        const s = document.createElement('small');
+        s.textContent = k.sub;
+        if (k.subCls) s.className = k.subCls;
+        b.append(s);
+      }
       if (k.cls) b.className = k.cls;
-      if (k.toggle) b.dataset.toggle = '1'; else b.dataset.code = k.code;
+      if (k.toggle) b.dataset.toggle = '1';
+      else if (k.ranges) b.dataset.ranges = '1';
+      else b.dataset.code = k.code;
       div.append(b);
     }
     pad.append(div);
   }
+  showRangesState();
   const letters = pad.querySelector('.letters');
   const release = b => {
     if (!b.classList.contains('pressed')) return;
@@ -518,6 +556,7 @@ if (pad) {
       b.classList.toggle('on', letters.classList.toggle('hidden') === false);
       return;
     }
+    if (b.dataset.ranges) { setRanges(!showRanges); return; }
     b.setPointerCapture(e.pointerId);
     b.classList.add('pressed');
     keyDown(+b.dataset.code);

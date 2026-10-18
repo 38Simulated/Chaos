@@ -65,6 +65,11 @@ pass WebSocket upgrades through for `/ws/`.
 
 ### Hostinger VPS
 
+To release, run the **Release** workflow from the Actions tab
+(`.github/workflows/release.yml`): it brings `production` up to date with
+`main` (a merge commit when needed; nothing happens if they conflict) and then
+starts the deploy. Pushing to `production` yourself deploys too.
+
 `.github/workflows/deploy.yml` deploys every push to the `production` branch with Hostinger's
 `deploy-on-vps` action. Hostinger's Docker Manager fetches the pushed commit and
 runs `compose.hostinger.yaml`, which builds the image on the VPS and puts the

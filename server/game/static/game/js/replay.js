@@ -61,7 +61,7 @@ function load(target = 0) {
   engine = new Chaos(gameImage(), { input, beeper, seed: data.seed, rules: data.rules, onEvent });
   input.engine = engine;
   renderer = new Renderer(canvas, engine.m, engine.spec);
-  renderer.hint = () => engine.rangeHint;
+  renderer.hint = () => showRanges ? engine.rangeHint : null;
   seek(target);
   renderSeats();
   engine.run(data.seed).catch(err => { console.error(err); setStatus('Replay error: ' + err.message); });
@@ -267,6 +267,17 @@ for (const [select, key, fallback] of [[timingSelect, 'chaos.replayTiming', time
   if (select.selectedIndex < 0) select.value = fallback;
 }
 applyTiming();
+// Range indicators, shared with the game page: R switches them.
+let showRanges = loadSetting('chaos.ranges', '0') === '1';
+const rangesState = document.querySelector('.ranges-state');
+rangesState.textContent = showRanges ? 'ranges on' : 'ranges off';
+document.addEventListener('keydown', e => {
+  if (e.key.toUpperCase() !== 'R' || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  if (e.target.closest('input, select, textarea')) return;
+  showRanges = !showRanges;
+  rangesState.textContent = showRanges ? 'ranges on' : 'ranges off';
+  saveSetting('chaos.ranges', showRanges ? '1' : '0');
+});
 soundBox.onchange = () => { updateSound(); saveSetting('chaos.sound', soundBox.checked ? '1' : '0'); };
 volumeSlider.oninput = () => beeper.setVolume(volumeSlider.value / 50);
 volumeSlider.onchange = () => { saveSetting('chaos.volume', volumeSlider.value); beeper.test(); };

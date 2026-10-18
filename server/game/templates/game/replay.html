@@ -16,7 +16,7 @@
         <a href="{% url 'index' %}" class="small-link">Home</a></div>
       <div id="status" class="status">Loading&hellip;</div>
       <p id="position" class="hint"></p>
-      {% if game.rules %}
+      {% if game.rule_list %}
       <div class="rules"><span class="label">Custom rules</span>
         <ul>{% for line in game.rule_list %}<li>{{ line }}</li>{% endfor %}</ul></div>
       {% endif %}
@@ -64,6 +64,7 @@
         with long waits (such as a player coming back later) cut short.</p>
       <p id="untimed-hint" class="hint hidden">This game was played before key timings were recorded,
         so a fixed pause stands in for the players' thinking time.</p>
+      <p><kbd>R</kbd> <span class="ranges-state">ranges off</span></p>
       <div class="sound">
         <label class="check"><input type="checkbox" id="sound" checked> Sound</label>
         <input type="range" id="volume" min="0" max="100" step="5" value="50" aria-label="Volume" title="Volume">

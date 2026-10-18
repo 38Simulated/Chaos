@@ -1,0 +1,55 @@
+# Releases main: brings the production branch up to date with main, then
+# starts the Deploy workflow on production. Run it by hand from the Actions
+# tab (Release > Run workflow).
+#
+# production moves forward to main when it can, and otherwise gets a merge
+# commit (earlier releases went through pull requests, whose merge commits
+# are only on production). If the merge conflicts, nothing is pushed or
+# deployed. If production already has everything on main, nothing is
+# deployed either; run Deploy by hand to redeploy.
+#
+# A push made with the workflow's own token doesn't start other workflows,
+# so this starts Deploy itself (which that token is allowed to do).
+
+name: Release
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # push to production
+  actions: write    # start the Deploy workflow
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out production
+        uses: actions/checkout@v4
+        with:
+          ref: production
+          fetch-depth: 0
+
+      - name: Merge main into production
+        id: merge
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "production already has everything on main; nothing to release."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git merge --no-edit -m "Release main to production" origin/main
+          git push origin HEAD:production
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Start the deploy
+        if: steps.merge.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref production --repo "$GITHUB_REPOSITORY"

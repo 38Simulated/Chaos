@@ -1,6 +1,6 @@
 # Chaos Online - Technical Overview
 
-Last updated: 2026-10-16
+Last updated: 2026-10-18
 
 ## Overview
 
@@ -56,28 +56,34 @@ The server is the Django project `chaos_site` with one app, `game`. It stores ga
 
 | Model | Key fields | Notes |
 | --- | --- | --- |
-| `Game` | `code`, `seed`, `status`, `human_seats`, `show_spells`, `public_replay`, `public_watch`, `watch_chat`, `watch_id`, `created`, `last_move`, `turn_seat`, `turn_seq`, `survivors` | `code` is 5 letters without I/O; `seed` is a random 31-bit int; `status` is `lobby`, `playing` or `finished`; `human_seats` is frozen at start; `show_spells`, `public_replay` and `public_watch` are chosen when the game is created (all off unless ticked), and the host can switch `public_watch` during the game; `watch_chat` (on by default) lets watchers chat, and only the host can switch it, during the game; `watch_id` is a random 12-character id, the game's public name (see "Watching public games"); `last_move` is the time of the last event; `turn_seat`, `turn_seq` and `survivors` are reported by the browsers (see "Turns and results") |
+| `Game` | `code`, `seed`, `status`, `human_seats`, `show_spells`, `public_replay`, `public_watch`, `watch_chat`, `watch_id`, `created`, `last_move`, `turn_seat`, `turn_seq`, `survivors`, `rules` | `code` is 5 letters without I/O, picked again if taken (and unique in the database); `seed` is a random 31-bit int; `status` is `lobby`, `playing`, `finished` or `cancelled`; `human_seats` is frozen at start; `show_spells`, `public_replay` and `public_watch` are chosen when the game is created (all off unless ticked), and the host can switch `public_watch` during the game; `watch_chat` (on by default) lets watchers chat, and only the host can switch it, during the game; `watch_id` is a random 12-character id, the game's public name (see "Watching public games"); `last_move` is the time of the last event; `turn_seat`, `turn_seq` and `survivors` are reported by the browsers (see "Turns and results"); `rules` holds a custom game's rules, plus `nextKey` for every game created since 2026-10-18, and `{}` for older normal games (see "Custom games"). The model also defines the permission `view_all_games` (see "Admins") |
 | `Player` | `game`, `seat`, `name`, `token`, `user`, `connected` | `seat` 0–7, or -1 for a spectator; the lowest seat is the host; `token` is a random hex secret; `user` is the account, set only when the player was logged in |
-| `Event` | `game`, `seq`, `seat`, `kind`, `code` | One entry of the ordered input log; `kind` is `down`, `up` or `takeover`; `(game, seq)` is unique |
+| `Event` | `game`, `seq`, `seat`, `kind`, `code`, `at` | One entry of the ordered input log; `kind` is `down`, `up` or `takeover`; `(game, seq)` is unique; `at` is when the server received it, used only to time replays (empty for events recorded before 2026-10-18) |
 
 ### HTTP routes (`game/urls.py`, `game/views.py`)
 
 | Route | Method | What it does |
 | --- | --- | --- |
 | `/` | GET | Lobby page: "New game" and "Join a game" forms, and the "Watch live" list of public games being played |
-| `/new/` | POST | Creates a `Game` and the host `Player` in seat 0, then redirects to the game page |
+| `/new/` | POST | Creates a `Game` and the host `Player` in seat 0, then redirects to the game page. Custom rules in the form are checked by `game/rules.py` and stored in `rules` |
+| `/new/custom/` | GET | The custom game form, which posts to `/new/` |
 | `/join/` | POST | Takes the lowest free seat while the game is in the lobby; after start, or when full, joins as a spectator (seat -1) |
 | `/g/<code>/` | GET | Game page (`play.html`) if this browser or the logged-in account has joined; otherwise the join form, pre-filled |
-| `/g/<code>/replay/` | GET | Replay page for a finished game: anyone with the link if `public_replay` or `public_watch`, otherwise only the game's players; 404 before the game ends |
-| `/g/<code>/replay.json` | GET | The replay's data, with the same access rule: seed, host seat, human seats, players, survivors and the event log |
+| `/g/<code>/cancel/`, `/g/<code>/delete/` | POST | Host only: cancels a game that hasn't finished, or deletes a cancelled one |
+| `/g/<code>/replay/` | GET | Replay page for a finished game: anyone with the link if `public_replay` or `public_watch`, otherwise only the game's players and admins; 404 before the game ends |
+| `/g/<code>/replay.json` | GET | The replay's data, with the same access rule: seed, host seat, human seats, players, survivors, rules and the event log, each event with `wait`, the milliseconds since the one before (null where a time is missing) |
 | `/w/<watch id>/` | GET | Watch page of a public game (`play.html` without a seat). 404 unless `public_watch`. The game's own players are redirected to their game page |
 | `/w/<watch id>/replay/`, `/w/<watch id>/replay.json` | GET | The replay of a finished public game, by watch id; 404 unless `public_watch` |
+| `/archive/` | GET | Archived games: finished games with `public_watch`, latest first, 30 a page, searchable by player name, linking to their replays by watch id |
+| `/games/` | GET | All games, for admins only (404 for anyone else): every game, filtered by status and searchable by code or player, 50 a page |
+| `/<DJANGO_ADMIN_PATH>/` | GET, POST | The Django admin, only where `DJANGO_ADMIN_PATH` puts it (`/admin/` in debug mode) |
+| `/help/`, `/help/mechanics/`, `/privacy/`, `/robots.txt`, `/sitemap.xml` | GET | Information pages, and the files for search engines |
 | `/accounts/signup/` | GET, POST | Optional account sign-up (username and password), then logs in |
 | `/accounts/login/`, `/accounts/logout/` | GET, POST / POST | Django's own login and logout views |
 
 **Accounts are optional.** Creating or joining stores the player's `token` in the Django session under `players[code]`. Both the game page and the WebSocket look the player up by that token first, so without an account the session cookie is the player's credential for that game.
 
-A logged-in player's seat also records their `user`. When the session has no token for a game, the game page and the WebSocket fall back to the account's seat, so the seat works from any browser; the game page then copies the token into the session. Logging in or signing up moves the seats this browser took anonymously to the account (`game/signals.py`). The lobby lists a logged-in player's games, with a filter for active (lobby or playing), finished or all games. Each row shows whose turn it is ("Your turn", "Waiting for …", "Computer wizard's turn") or the result, and the time of the last move. The header counts the games waiting for the player.
+A logged-in player's seat also records their `user`. When the session has no token for a game, the game page and the WebSocket fall back to the account's seat, so the seat works from any browser; the game page then copies the token into the session. Logging in or signing up moves the seats this browser took anonymously to the account (`game/signals.py`). The lobby lists a logged-in player's games, with a filter for active (lobby or playing), finished, cancelled or all games. Each row shows whose turn it is ("Your turn", "Waiting for …", "Computer wizard's turn") or the result, and the time of the last move. The header counts the games waiting for the player.
 
 ### WebSocket protocol (`game/consumers.py`)
 
@@ -110,6 +116,7 @@ The client is plain ES modules with no build step and no framework. `play.html` 
 - **Lobby and seats:** renders the seat list and the host's "Start game" button. During play it adds a "Take over" button to absent human seats, shown to the host only.
 - **Keyboard:** `spectrumCode()` maps browser keys to Spectrum codes (letters upper case, Enter `0x0D`, Space `0x20`, Backspace/Delete `0x0C`). A key is sent only if this player may answer the current prompt. Held keys auto-repeat after 150 ms, every 120 ms.
 - **Turn status:** shows whose input the engine is waiting for ("Your move", "Waiting for …").
+- **On-screen keys:** for phones and tablets, a pad of buttons under the screen (the direction keys, S, K, I, 0, Y, N, the digits and a panel of letters) that sends the same key downs and ups as the keyboard. The "On-screen keys" box switches it, remembered in the browser; it starts on for touch screens (`pointer: coarse`).
 - **Ticker:** a `setInterval` of 20 ms counts how many 50 Hz Spectrum frames are owed. It runs them one at a time through a `MessageChannel`, up to 250 frames (5 s) of catch-up. `requestAnimationFrame` only redraws the canvas. Timers keep running in background tabs; rAF does not.
 
 ### Input lockstep (`js/input.js`)
@@ -124,7 +131,7 @@ An event from anyone else is consumed and ignored. Every client sees the same ev
 
 ### Engine (`js/engine/`)
 
-- **Structure:** `index.js` assembles the `Chaos` class from `core.js` plus mixins: `setup.js` (setup, round loop, end screens), `spells.js`, `movement.js`, `ui.js` and `ai.js` (computer wizards).
+- **Structure:** `index.js` assembles the `Chaos` class from `core.js` plus mixins: `setup.js` (setup, round loop, end screens), `spells.js`, `movement.js`, `ui.js`, `ai.js` (computer wizards) and `rules.js` (custom games).
 - **Fidelity to the original:** routines are named after their Z80 address (for example `r_89F9` is the start of a game). They can be checked line by line against the SkoolKit disassembly in `re/chaos.skool`.
 - **Memory:** state lives in a 64 KB `Uint8Array` laid out like the Spectrum's. `engine/image.js` supplies its starting contents: RAM `$4000`-`$FFFF` as the original game's loader leaves it, holding the graphics, fonts, text and tables. The game's machine code is in there too, but nothing runs it. The ROM area is all zero. The original reads ROM in only one place: object 0 (an empty square) has no stats record, and its record pointer is `$2020`, inside the ROM. `r_BE0A` returns those ROM values from the `OBJECT0_STATS` table in `engine/spells.js`. The ROM area is restored every 16 frames, because ROM writes do nothing on real hardware.
 - **Determinism:** the original gathered timing entropy for randomness; the port uses a seeded mulberry32 RNG instead. Each new game in a session reseeds from `seed + game × 0x9E3779B9`. Display-only work (board animation, cursor blink, sound) never feeds back into the logic.
@@ -132,7 +139,7 @@ An event from anyone else is consumed and ignored. Every client sees the same ev
 
 ### Display and sound (`js/spectrum.js`)
 
-`Spectrum` emulates the ROM routines the game calls: `RST $10` printing, `PLOT` and pixel addressing. They work on the same memory array. `Renderer` converts screen memory (`$4000`–`$5AFF`, including attributes and FLASH) into a 320×240 canvas with a border. `Beeper` plays the game's beeps through Web Audio, started on the first key press or click.
+`Spectrum` emulates the ROM routines the game calls: `RST $10` printing, `PLOT` and pixel addressing. They work on the same memory array. `Renderer` converts screen memory (`$4000`–`$5AFF`, including attributes and FLASH) into a 320×240 canvas with a border. It also draws the range indicators (the engine's `rangeHint`, a mask of board squares), when this browser has them switched on, as a Spectrum could have, with two colours per character cell: blue dots on empty squares and blue paper behind pieces. It changes only the picture, never screen memory. `Beeper` plays the game's beeps through Web Audio, started on the first key press or click.
 
 ## Game lifecycle
 
@@ -156,7 +163,17 @@ Spectators (seat -1) receive every event and watch the game, but the consumer dr
 
 The watch link never contains or reveals the game code, because the code lets people join: `/g/<code>/` offers the join form, which takes a free seat while the game is in the lobby. The watch page, the watcher's WebSocket, the "Watch live" list and the replay by watch id all leave the code out, and the watch id is random, so it cannot be turned into the code. Turning public watching off closes every watcher's connection (close code 4000, shown as "This game is no longer public") and the watch link stops working. A public game's replay is public too. When spells are hidden, watchers see the curtain over every wizard's spell menu, like a player who cannot answer for that seat.
 
-**Replays.** A finished game can be watched again at `/g/<code>/replay/` (`js/replay.js`). The page fetches the seed and event log once and runs the engine on them with no seat and no WebSocket, so it plays the same game the players saw on reload. Controls: play/pause, restart, 1× to 16× speed (sound at 1× only), "Skip to end", and clicking the progress bar to jump. Jumping forward replays in fast mode up to that event. Jumping back rebuilds the engine and replays from the start. Everything is shown, including spells that were hidden during play. The lobby list and the result screen link to it.
+**Replays.** A finished game can be watched again at `/g/<code>/replay/` (`js/replay.js`). The page fetches the seed and event log once and runs the engine on them with no seat and no WebSocket, so it plays the same game the players saw on reload. Controls: play/pause, restart, 1× to 16× speed (sound at 1× only), "Skip to end", and clicking the progress bar to jump. Jumping forward replays in fast mode up to that event. Jumping back rebuilds the engine and replays from the start. Everything is shown, including spells that were hidden during play. The lobby list, the archive and the result screen link to it.
+
+The page hands the engine one event at a time, as its *Timing* setting says. *As played* (the default) waits each event's `wait`, the time between the players' keys as the server received them, cut to at most a chosen limit (5 s by default) so that a turn played the next day doesn't stall the replay. A fixed pause (none to 2 s) waits that long before each key press instead; games recorded before event times were kept only have this, ½ s by default. Waits count engine frames, so they follow the speed and stop while paused. Jumping hands over every event up to the target at once. The choices are remembered in the browser.
+
+**Archived games.** `/archive/`, linked from the "Watch live" panel, lists the finished games that anyone could watch live, latest first, with their replays by watch id. Like the other public pages it never shows a game code. Games that only had "Anyone with the link can watch the replay" are not listed: their link was meant to be shared, not published.
+
+**Admins.** Users with the permission `game.view_all_games` (the **Admins** group has it; migration `0010` creates the group) and superusers are the site's admins. They are made in the Django admin, by adding the user to the group, and need no staff status. They get an "All games" link to `/games/`, which lists every game whatever its settings, and can watch the replay of any finished game.
+
+**Custom games.** `/new/custom/` creates a game with some of the original's rules changed: the number of turns and of spells, every wizard's ability, the wizards' statistics, Turmoil as a starting spell, and the Troll left out of the original. `game/rules.py` checks the form and stores only the rules that differ from the original in `Game.rules`. Every new game, custom or not, also gets `nextKey` (N jumps to the next piece that can move), which isn't listed as a custom rule; games created before it have `{}`, the original game, so their logs still play back as they were played. The rules reach every browser with the page (`window.CHAOS.rules`) and the replay data, and the engine takes them as `opts.rules`; `engine/rules.js` explains each one. They are fixed at creation like the seed, so every engine still plays the same game. The Troll uses the original's unused piece record at `$E70D`, with a spell entry written into unused memory at `$A700` when the game starts. [MECHANICS.md](MECHANICS.md#custom-games) gives each rule's effect.
+
+**Range indicators.** The engine works out, in every game, which squares the piece being moved or shooting, or the spell being aimed, can reach (`engine/rules.js`, into `rangeHint`). Each browser chooses whether to draw them: R while the cursor is on the board (where the game ignores R, so it isn't sent; on the replay page, R at any time) or the R pad button, remembered as `chaos.ranges` and off until switched on. The key lists and the pad button say "ranges on" or "ranges off". Nothing in the game reads `rangeHint`, so this changes only the picture.
 
 **Hidden spells.** Unless the host ticked "Players can see each other's spells", each human wizard's spell menu is private: the spell list, spell information, examining the board, and the "Illusion?" answer. The engine reports `{type: 'turn', phase: 'menu', seat}` when it opens a wizard's menu. Every browser that cannot answer for that seat covers the screen with "<name> is choosing a spell…" until the next turn event. That covers other players and spectators, and the host only until they take over the seat. Casting stays public, as in the original. Only the drawing changes, so the engines stay in lockstep. This is privacy between honest players, not security: every browser runs the whole game, so anyone using the browser's developer tools can still read every wizard's spells.
 
@@ -201,6 +218,7 @@ To regenerate `engine/image.js`, run `python tools/build_assets.py [chaos.tap|.t
 | `DJANGO_HTTPS` | unset | `1` when the site is served over HTTPS: the session and CSRF cookies are then sent over HTTPS only |
 | `DATABASE_URL` | `postgres://chaos:chaos@127.0.0.1:5432/chaos`, only while debug is on | PostgreSQL connection as `postgres://user:password@host:port/name`. Required when `DJANGO_DEBUG` is not `1`: the app refuses to start without it. Percent-encode special characters in the password |
 | `REDIS_URL` | `redis://127.0.0.1:6379/0` | Redis server for the channel layer. Must be reachable, or WebSocket connections fail |
+| `DJANGO_ADMIN_PATH` | `admin/` while debug is on; otherwise none | Where the Django admin is, such as `manage-x7q2k`. With debug off and no path, the site has no admin. A path that is hard to guess keeps out bots trying `/admin/` |
 
 ### Deployment
 
@@ -210,7 +228,7 @@ Three Compose files in the repository root run the site with PostgreSQL, Redis a
 
 - `compose.yaml` runs an existing image (`CHAOS_IMAGE`), with settings from `.env` (see `.env.example`). It works on a server without the source code.
 - `compose.build.yaml` adds the build from `server/`, for use with `compose.yaml` where the source is.
-- `compose.hostinger.yaml` is the production setup on the Hostinger VPS: it builds the image, sets `DJANGO_HTTPS=1`, and puts the site behind the VPS's existing Traefik, which serves `DOMAIN` over HTTPS with a Let's Encrypt certificate. That Traefik runs with host networking and reaches the site on the project's own network; router labels on the site (entrypoint `websecure`, resolver `letsencrypt`) send `DOMAIN` to it. `.github/workflows/deploy.yml` deploys it on every push to `main` through Hostinger's `deploy-on-vps` action, which asks Hostinger's Docker Manager to fetch the commit and run the file, passing `DOMAIN`, `DJANGO_SECRET_KEY` and `POSTGRES_PASSWORD` from the repository's GitHub secrets and variables. See `server/README.md` for the setup.
+- `compose.hostinger.yaml` is the production setup on the Hostinger VPS: it builds the image, sets `DJANGO_HTTPS=1`, and puts the site behind the VPS's existing Traefik, which serves `DOMAIN` over HTTPS with a Let's Encrypt certificate. That Traefik runs with host networking and reaches the site on the project's own network; router labels on the site (entrypoint `websecure`, resolver `letsencrypt`) send `DOMAIN` to it. `.github/workflows/release.yml`, run by hand, brings `production` up to date with `main` and then starts the deploy. `.github/workflows/deploy.yml` deploys it on every push to the `production` branch through Hostinger's `deploy-on-vps` action, which asks Hostinger's Docker Manager to fetch the commit and run the file, passing `DOMAIN`, `DJANGO_SECRET_KEY`, `POSTGRES_PASSWORD` and `DJANGO_ADMIN_PATH` from the `production` environment's GitHub secrets and variables. The `migrate` container applies new migrations on every deploy. See `server/README.md` for the setup.
 
 `collectstatic` writes a copy of each static file with a hash of its contents in the name (`main.3f5c62397680.js`), using Django's `ManifestStaticFilesStorage` (`chaos_site/storage.py`). It also rewrites the `import` lines between the JS modules to the hashed names, so a change to any module gives it and every module that imports it a new URL. With debug off, pages link to the hashed names, and the handler serves them from `STATIC_ROOT` with a one-year `Cache-Control: immutable`. Players get new code after a deploy without a forced reload. In debug mode the pages use the plain names, served straight from the app's `static/` folder.
 
@@ -235,4 +253,5 @@ With Redis for broadcasts and PostgreSQL for storage, several server processes c
 | Background tabs | Browsers throttle timers in hidden tabs, heavily after about 5 minutes | The 5 s catch-up cap is reached and the engine runs slower than real time until the tab is visible |
 | Identity | Without an account, seats are bound to the browser session | A player who never logged in loses the seat by clearing cookies or switching browser. Recovering needs a host takeover |
 | Accounts | Username and password only; no email, so no password reset | A forgotten password can only be reset by an admin (`manage.py changepassword`) |
-| Tests | `game/tests.py` covers creating, joining and accounts, including the WebSocket lookup | Nothing automated guards the rest of the protocol or the engine port |
+| Tests | `game/tests.py` covers the server: creating and joining, accounts, cancelling, watching, replays, custom rules, the archive, admins and much of the WebSocket protocol | The test suite doesn't cover the engine port; `re/tools/` has the lockstep and comparison tools for that |
+| Game codes | A new code is checked to be free, but two games created at the same instant could still draw the same one | The database refuses the second, and that player gets an error page. With about 8 million codes this is very unlikely |

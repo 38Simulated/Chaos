@@ -1,5 +1,6 @@
 # Deploys to the Hostinger VPS on every push to production (or by hand from the
-# Actions tab). Hostinger's Docker Manager fetches this commit and runs
+# Actions tab, and from the Release workflow, which brings production up to
+# date with main first). Hostinger's Docker Manager fetches this commit and runs
 # compose.hostinger.yaml, building the site image on the VPS.
 #
 # Settings of the "production" environment (Settings > Environments > production):

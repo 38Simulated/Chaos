@@ -279,26 +279,41 @@ class AdminTests(TestCase):
 
 
 class CustomRulesTests(TestCase):
-    FORM = {'name': 'Host', 'custom': '1', 'turns': '30', 'next_key': 'on', 'ranges': 'on',
+    FORM = {'name': 'Host', 'custom': '1', 'turns': '30',
             'turmoil': 'on', 'troll': 'on', 'ability': '0', 'spells': '14', 'stats': 'max',
             'stats_for': 'computer'}
 
     def test_parse_keeps_only_valid_changes(self):
-        self.assertEqual(rules.parse({'turns': '', 'ability': '', 'spells': '', 'stats': ''}), {})
-        self.assertEqual(rules.parse(self.FORM), {
-            'turns': 30, 'nextKey': True, 'ranges': True, 'turmoil': True, 'troll': True, 'ability': 0,
-            'spells': 14, 'stats': 'max', 'statsFor': 'computer'})
+        standard = {'nextKey': True}
+        self.assertEqual(rules.parse({'turns': '', 'ability': '', 'spells': '', 'stats': ''}), standard)
+        self.assertEqual(rules.parse(self.FORM), dict(
+            standard, turns=30, turmoil=True, troll=True, ability=0, spells=14, stats='max',
+            statsFor='computer'))
         bad = {'turns': '4', 'ability': '4', 'spells': '21', 'stats': 'huge', 'stats_for': 'all'}
-        self.assertEqual(rules.parse(bad), {})
+        self.assertEqual(rules.parse(bad), standard)
         self.assertEqual(rules.parse({'turns': 'x', 'stats': 'equal', 'stats_for': 'nobody'}),
-                         {'stats': 'equal', 'statsFor': 'all'})
+                         dict(standard, stats='equal', statsFor='all'))
+        # older games' rules that are no longer custom aren't listed
+        self.assertEqual(rules.describe({'nextKey': True, 'ranges': True}), [])
 
-    def test_normal_games_have_no_rules(self):
+    def test_normal_games_have_only_the_standard_rules(self):
         client = Client()
         game = create_game(client)
-        self.assertEqual(game.rules, {})
+        self.assertEqual(game.rules, {'nextKey': True})
+        # custom fields posted without the custom form are ignored
+        client.post('/new/', {'name': 'Host', 'turns': '30'})
+        self.assertEqual(Game.objects.latest('created').rules, {'nextKey': True})
         page = client.get(f'/g/{game.code}/')
         self.assertNotContains(page, 'Custom rules')
+        self.assertContains(page, '<kbd>N</kbd> next piece to move')
+        self.assertContains(page, '<script id="rules" type="application/json">{"nextKey": true}</script>', html=True)
+
+    def test_older_games_keep_their_rules(self):
+        host = Client()
+        game = create_game(host)
+        Game.objects.filter(pk=game.pk).update(rules={})
+        page = host.get(f'/g/{game.code}/')
+        self.assertNotContains(page, 'next piece to move')
         self.assertContains(page, '<script id="rules" type="application/json">{}</script>', html=True)
 
     def test_custom_game_keeps_its_rules_for_players_watchers_and_replays(self):
