@@ -5,6 +5,8 @@ import string
 from django.conf import settings
 from django.db import models
 
+from . import rules
+
 MAX_SEATS = 8
 MAX_NAME = 20     # player names, and usernames (players use theirs as their name)
 
@@ -59,9 +61,19 @@ class Game(models.Model):
     turn_seat = models.IntegerField(null=True, blank=True)
     turn_seq = models.IntegerField(default=0)
     survivors = models.JSONField(default=list, blank=True)   # seats alive at game over
+    # custom rules (game/rules.py), fixed when the game is created; {} is the original game
+    rules = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        # given to site admins in the Django admin (the Admins group has it):
+        # they see every game on the All games page and can watch any replay
+        permissions = [('view_all_games', 'Can see and watch every game')]
 
     def __str__(self):
         return self.code
+
+    def rule_list(self):
+        return rules.describe(self.rules)
 
     def host(self):
         # the lowest seat: people who joined after the start watch from seat -1

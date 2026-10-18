@@ -1,4 +1,4 @@
-# Deploys to the Hostinger VPS on every push to main (or by hand from the
+# Deploys to the Hostinger VPS on every push to production (or by hand from the
 # Actions tab). Hostinger's Docker Manager fetches this commit and runs
 # compose.hostinger.yaml, building the site image on the VPS.
 #
@@ -6,6 +6,9 @@
 #   secret   HOSTINGER_API_KEY   API key from hPanel
 #   secret   DJANGO_SECRET_KEY   python -c "import secrets; print(secrets.token_urlsafe(50))"
 #   secret   POSTGRES_PASSWORD   same command; letters, digits, - and _ only
+#   secret   DJANGO_ADMIN_PATH   optional: where the Django admin is, a path that
+#                                is hard to guess, e.g. manage-<random letters>;
+#                                unset, the site has no admin
 #   variable HOSTINGER_VM_ID     the number in the VPS host name (srv123456 -> 123456)
 #   variable DOMAIN              the site's host name, e.g. www.example.com
 #   variable DOMAIN_ALIAS        optional: another host name that redirects to
@@ -44,4 +47,5 @@ jobs:
             DOMAIN_ALIAS=${{ vars.DOMAIN_ALIAS }}
             DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}
             POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            DJANGO_ADMIN_PATH=${{ secrets.DJANGO_ADMIN_PATH }}
             CHAOS_COMMIT=${{ github.sha }}

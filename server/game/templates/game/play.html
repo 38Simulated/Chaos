@@ -30,6 +30,10 @@
         <a href="{% url 'index' %}" class="small-link">Home</a></div>
       {% endif %}
       <div id="status" class="status">Connecting&hellip;</div>
+      {% if game.rules %}
+      <div class="rules"><span class="label">Custom rules</span>
+        <ul>{% for line in game.rule_list %}<li>{{ line }}</li>{% endfor %}</ul></div>
+      {% endif %}
       <p class="hint">{% if game.show_spells %}Spells are visible to everyone.{% else %}Each wizard's spells are hidden from the others{% if watching %} and from watchers{% endif %}.{% endif %}</p>
       {% if watching %}
       <button id="copy-watch" class="small">Copy watch link</button>
@@ -69,7 +73,8 @@
       <h3>Keys</h3>
       <p><kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> <kbd>A</kbd> <kbd>D</kbd> <kbd>Z</kbd><kbd>X</kbd><kbd>C</kbd> move cursor
         &middot; <kbd>S</kbd> select &middot; <kbd>K</kbd> cancel &middot; <kbd>I</kbd> info
-        &middot; <kbd>1</kbd>&ndash;<kbd>8</kbd> show a wizard's creations &middot; <kbd>0</kbd> end turn</p>
+        &middot; <kbd>1</kbd>&ndash;<kbd>8</kbd> show a wizard's creations &middot; <kbd>0</kbd> end turn{% if game.rules.nextKey %}
+        &middot; <kbd>N</kbd> next piece to move{% endif %}</p>
       <label class="check pad-check"><input type="checkbox" id="pad-on"> On-screen keys (for phones and tablets)</label>
       {% endif %}
       <div class="sound">
@@ -97,11 +102,13 @@
     </div>
   </aside>
 </div>
+{{ game.rules|json_script:"rules" }}
 <script>
   window.CHAOS = {
     watching: {{ watching|yesno:"true,false" }},
     seat: {% if player %}{{ player.seat }}{% else %}-1{% endif %},
     showSpells: {{ game.show_spells|yesno:"true,false" }},
+    rules: JSON.parse(document.getElementById('rules').textContent),
     wsPath: "{{ ws_path|escapejs }}",
     inviteUrl: "{% if room %}{% url 'game' room %}{% endif %}",
     watchUrl: "{% url 'watch' game.watch_id %}",

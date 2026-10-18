@@ -713,8 +713,10 @@ Turmoil hang):
 ## Left out of the original
 
 The original's memory holds a creature and several spells that never made it
-into the game. Nothing in the code uses them, so they never appear in Chaos or
-in Chaos Online.
+into the game. Nothing in the code uses them, so they never appear in Chaos, or
+in a normal Chaos Online game. A Chaos Online custom game can add the Troll: it
+is then one of the spells a wizard may start with or get from a Magic Wood, and
+plays with the statistics and graphics below.
 
 - **The Troll.** A complete piece record (`$E70D`) that the piece table
   (`$E3E0`) never points to, so it can't be cast or appear. Its statistics:

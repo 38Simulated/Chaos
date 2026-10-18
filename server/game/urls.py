@@ -7,7 +7,10 @@ from . import views
 urlpatterns = [
     path('', views.index, name='index'),
     path('new/', views.create, name='create'),
+    path('new/custom/', views.custom, name='custom'),
     path('join/', views.join, name='join'),
+    path('games/', views.all_games, name='all_games'),
+    path('archive/', views.archive, name='archive'),
     path('g/<str:code>/', views.game_page, name='game'),
     path('g/<str:code>/cancel/', views.cancel, name='cancel'),
     path('g/<str:code>/delete/', views.delete, name='delete'),

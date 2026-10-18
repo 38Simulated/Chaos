@@ -6,8 +6,9 @@ from django import forms
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils import timezone
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -15,6 +16,7 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.decorators.http import require_POST
 
+from . import rules
 from .context_processors import site_origin
 from .models import MAX_NAME, MAX_SEATS, Game, Player
 
@@ -124,6 +126,51 @@ def _live_games():
              'players': [p for p in g.players.all() if p.seat >= 0]} for g in games]
 
 
+def _sees_all_games(request):
+    """Is this a site admin (permission game.view_all_games, given in the
+    Django admin)? Superusers always are."""
+    return request.user.has_perm('game.view_all_games')
+
+
+ALL_GAMES_FILTERS = {'all': 'All', 'lobby': 'In the lobby', 'playing': 'Playing',
+                     'finished': 'Finished', 'cancelled': 'Cancelled'}
+
+
+def all_games(request):
+    """Every game, whoever played it and however it was set up: for admins only."""
+    if not _sees_all_games(request):
+        raise Http404('No such page.')
+    show = request.GET.get('show')
+    show = show if show in ALL_GAMES_FILTERS else 'all'
+    query = (request.GET.get('q') or '').strip()
+    games = Game.objects.prefetch_related('players__user')
+    if show != 'all':
+        games = games.filter(status=show)
+    if query:
+        games = games.filter(Q(code__iexact=query) | Q(players__name__icontains=query)).distinct()
+    games = games.order_by(F('last_move').desc(nulls_last=True), '-created')
+    page = Paginator(games, 50).get_page(request.GET.get('page'))
+    rows = [{'game': g, 'state': g.state_for()[0], 'last': g.last_move or g.created,
+             'players': [p for p in g.players.all() if p.seat >= 0]} for g in page]
+    return render(request, 'game/all_games.html', {
+        'rows': rows, 'page': page, 'show': show, 'filters': ALL_GAMES_FILTERS, 'query': query})
+
+
+def archive(request):
+    """Finished public games (those anyone could watch live), latest first,
+    to watch again. Links use the watch id, never the game code."""
+    query = (request.GET.get('q') or '').strip()
+    games = (Game.objects.filter(public_watch=True, status=Game.FINISHED)
+             .prefetch_related('players__user'))
+    if query:
+        games = games.filter(players__name__icontains=query, players__seat__gte=0).distinct()
+    games = games.order_by(F('last_move').desc(nulls_last=True), '-created')
+    page = Paginator(games, 30).get_page(request.GET.get('page'))
+    rows = [{'game': g, 'state': g.state_for()[0], 'last': g.last_move or g.created,
+             'players': [p for p in g.players.all() if p.seat >= 0]} for g in page]
+    return render(request, 'game/archive.html', {'rows': rows, 'page': page, 'query': query})
+
+
 def index(request):
     context = {'error': request.GET.get('error'), 'live_games': _live_games()}
     if _account(request):
@@ -134,15 +181,25 @@ def index(request):
     return render(request, 'game/index.html', context)
 
 
+def custom(request):
+    """The form for a game with custom rules; it posts to create()."""
+    return render(request, 'game/custom.html', {
+        'error': request.GET.get('error'),
+        'turns': rules.TURNS, 'abilities': rules.ABILITY, 'spell_counts': rules.SPELLS,
+        'stats': rules.STATS, 'stats_for': rules.STATS_FOR})
+
+
 @require_POST
 def create(request):
     name = _player_name(request)
     if name is None:
-        return redirect(reverse('index') + '?' + urlencode({'error': NAME_TAKEN}))
+        back = 'custom' if request.POST.get('custom') else 'index'
+        return redirect(reverse(back) + '?' + urlencode({'error': NAME_TAKEN}))
     with transaction.atomic():
         game = Game.objects.create(show_spells=bool(request.POST.get('show_spells')),
                                    public_replay=bool(request.POST.get('public_replay')),
-                                   public_watch=bool(request.POST.get('public_watch')))
+                                   public_watch=bool(request.POST.get('public_watch')),
+                                   rules=rules.parse(request.POST))
         player = Player.objects.create(game=game, seat=0, name=name,
                                        user=_account(request))
     _session_players(request)[game.code] = player.token
@@ -252,7 +309,7 @@ def robots_txt(request):
     return HttpResponse('\n'.join(lines) + '\n', content_type='text/plain')
 
 
-SITEMAP_PAGES = ['index', 'help', 'mechanics', 'privacy']
+SITEMAP_PAGES = ['index', 'archive', 'help', 'mechanics', 'privacy']
 
 
 def sitemap_xml(request):
@@ -276,14 +333,16 @@ def signup(request):
 def _watchable(request, code=None, watch_id=None):
     """A finished game this browser may watch the replay of, or 404.
 
-    By code: the players, or anyone when the replay or the game is public.
+    By code: the players and admins, or anyone when the replay or the game
+    is public.
     By watch id: public games only (the watch link's replay).
     """
     if watch_id is not None:
         game = get_object_or_404(Game, watch_id=watch_id, public_watch=True)
     else:
         game = get_object_or_404(Game, code=code.upper())
-        if not (game.public_replay or game.public_watch) and not _find_player(request, game):
+        if (not (game.public_replay or game.public_watch) and not _sees_all_games(request)
+                and not _find_player(request, game)):
             raise Http404('Only the players can watch this replay.')
     if game.status != Game.FINISHED:
         raise Http404('The replay opens when the game is over.')
@@ -308,5 +367,6 @@ def replay_data(request, code=None, watch_id=None):
         'players': [{'seat': p.seat, 'name': p.name, 'registered': p.registered}
                     for p in game.players.select_related('user') if p.seat >= 0],
         'survivors': game.survivors,
+        'rules': game.rules,
         'events': [e.as_dict() for e in game.events.all()],
     })

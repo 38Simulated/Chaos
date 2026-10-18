@@ -76,6 +76,7 @@ export const UiMixin = {
     m[SV.FLAGS2] = 8;
     if (m[V.ISCPU]) k = this.r_CDC0();
     m[0xAC32] = k;
+    if (k === 0x4E && this.selecting && this.rules.nextKey && !m[V.ISCPU]) return this.nextUnmoved(bc);
     let b = bc >> 8, c = bc & 0xFF;
     const up = () => { b--; if (b === 0) b++; };
     const dn = () => { b++; if (b === 0x0B) b--; };
@@ -364,7 +365,7 @@ export const UiMixin = {
       if ((i & 0x0F) === 0x0F) continue;
       const a = BOARD + i, id = m[a];
       if (id === 0 || this.losTransparent(i)) continue;
-      const rec = this.rw(0xE3E0 + ((id - 1) * 2 & 0xFF));
+      const rec = this.record(id);
       const spr = this.rw(rec + 0x17);
       const row = ((i >> 4) * 2 + 1) * 8, col = ((i & 15) * 2 + 1) * 8;
       for (let q = 0; q < 4; q++) {

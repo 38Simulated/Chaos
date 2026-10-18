@@ -1,0 +1,49 @@
+{% extends "game/base.html" %}
+{% load static %}
+{% block title %}All games - Chaos Online{% endblock %}
+{% block indexing %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+{% include "game/_userbar.html" %}
+<main class="lobby">
+  <h1 class="title"><a href="{% url 'index' %}"><img src="{% static 'game/img/logo.png' %}" alt="CHAOS" width="960" height="272"></a></h1>
+  <p class="subtitle">All games</p>
+  <section class="card mygames allgames" id="games">
+    <h2>{{ page.paginator.count }} game{{ page.paginator.count|pluralize }}</h2>
+    <form class="search" method="get">
+      <input type="hidden" name="show" value="{{ show }}">
+      <input name="q" value="{{ query }}" placeholder="Game code or player name" aria-label="Game code or player name">
+      <button type="submit" class="small">Search</button>
+      {% if query %}<a href="?show={{ show }}">Clear</a>{% endif %}
+    </form>
+    <nav class="filters">
+      {% for key, label in filters.items %}
+      {% if key == show %}<strong>{{ label }}</strong>{% else %}<a href="?show={{ key }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}">{{ label }}</a>{% endif %}
+      {% endfor %}
+    </nav>
+    {% if rows %}
+    <ul>
+      {% for row in rows %}
+      <li>
+        <span class="code">{{ row.game.code }}</span>
+        <span>{% for p in row.players %}{{ p.name }}{% if p.registered %}<span class="reg" title="Registered player">&#10003;</span>{% endif %}{% if not forloop.last %}, {% endif %}{% empty %}No players{% endfor %}</span>
+        <span class="state">{{ row.state }}</span>
+        {% if row.game.rules %}<span class="hint" title="{{ row.game.rule_list|join:'. ' }}">Custom</span>{% endif %}
+        {% if row.game.public_watch %}<span class="hint">Public</span>{% endif %}
+        {% if row.game.status == 'finished' %}<a href="{% url 'replay' row.game.code %}">Watch replay</a>{% endif %}
+        <span class="hint">{{ row.last|timesince }} ago</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="hint">No games{% if query %} match &ldquo;{{ query }}&rdquo;{% endif %}.</p>
+    {% endif %}
+    {% if page.has_other_pages %}
+    <nav class="filters pages">
+      {% if page.has_previous %}<a href="?show={{ show }}&amp;q={{ query|urlencode }}&amp;page={{ page.previous_page_number }}">&larr; Newer</a>{% endif %}
+      <span class="hint">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}<a href="?show={{ show }}&amp;q={{ query|urlencode }}&amp;page={{ page.next_page_number }}">Older &rarr;</a>{% endif %}
+    </nav>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

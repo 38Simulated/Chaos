@@ -48,6 +48,12 @@ CSRF_TRUSTED_ORIGINS = [
     if origin.strip()
 ]
 
+# Where the Django admin is, e.g. 'manage-a8f3/'. It defaults to admin/ in
+# debug mode; outside it there is no admin unless this is set, and a path
+# that is hard to guess keeps out bots trying /admin/.
+ADMIN_PATH = os.environ.get('DJANGO_ADMIN_PATH', 'admin/' if DEBUG else '').strip().strip('/')
+ADMIN_PATH = ADMIN_PATH + '/' if ADMIN_PATH else ''
+
 # Served over HTTPS (behind a proxy that sets X-Forwarded-Proto, which Daphne
 # reads with --proxy-headers): only send the session and CSRF cookies over HTTPS.
 SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = os.environ.get('DJANGO_HTTPS') == '1'

@@ -44,7 +44,10 @@ export const MovementMixin = {
     const m = this.m;
     for (;;) {
       this.ww(0x5C7B, 0xC33D);
-      let a = await this.r_BC96();
+      // choosing a piece: N may jump to the next one that hasn't moved
+      this.selecting = true;
+      let a;
+      try { a = await this.r_BC96(); } finally { this.selecting = false; }
       if (a === 0x53) a = await this.r_ACED();
       if (a === 0x30) break;
     }
@@ -69,7 +72,8 @@ export const MovementMixin = {
   async r_ACED() {
     const m = this.m;
     if (this.debug) this.debug('ACED', { sq: this.rw(V.P12).toString(16), id: m[this.rw(V.P12)], l3: m[this.rw(V.P12) + L3], l4: m[this.rw(V.P12) + L4], p: m[V.PLAYER], ac31: m[0xAC31] });
-    const r = await this.r_ACED_();
+    let r;
+    try { r = await this.r_ACED_(); } finally { this.clearRange(); }
     if (this.debug) this.debug('ACED ret', { r, sq: this.rw(V.P14).toString(16) });
     return r;
   },
@@ -171,6 +175,7 @@ export const MovementMixin = {
           }
           // $AE77: the original polls the keyboard in a tight loop here; idle
           // iterations change nothing, so waiting for the next key is equivalent.
+          this.showWalk(this.rw(V.P14), m[0xAC01], !!m[0xAC07]);
           bc = await this.r_BBE7(bc, m[V.ISCPU] ? undefined : await this.key());
         }
       }
@@ -312,6 +317,7 @@ export const MovementMixin = {
     this.r_BED7();
     this.ww(0xAC04, bc);
     if (m[0xAC07]) m[0xAC03] = 3;
+    this.showReach(this.r_BDD1(bc), m[0xAC03]);
     for (;;) {
       let k;
       if (m[V.ISCPU]) k = this.r_C9DC();
@@ -344,6 +350,7 @@ export const MovementMixin = {
       const target = this.rw(V.CURSOR);
       this.ww(V.CURSOR, this.rw(0xAC04));
       m[0xAC11] = 1;
+      this.clearRange();
       return { bc: target };
     }
   },
@@ -407,7 +414,7 @@ export const MovementMixin = {
     if (!(aw & 0x80)) {
       const fa = V.WFLAGS + aw;
       m[fa] &= ~0x08;
-      const ix = this.rw(0xE3E0 + ((att - 1) * 2 & 0xFF));
+      const ix = this.record(att);
       m[ix + 0x1C] = m[ix + 0x19];
       m[ix + 0x22] = m[ix + 0x19];
       const wpn = m[fa] & 7;
@@ -514,7 +521,7 @@ export const MovementMixin = {
     m[V.DEADCOUNT] = u8(m[V.DEADCOUNT] + 1);
     await this.r_C2F9(0xC2A7);
     const sq = this.rw(V.P12);
-    const rec = this.rw(0xE3E0 + ((m[sq] - 1) * 2 & 0xFF));
+    const rec = this.record(m[sq]);
     const spr = this.rw(rec + 0x17);
     this.onEvent({ type: 'wizarddead', seat: u8(m[sq] - 0x29) });
     for (let b = 8; b > 0; b--) {
@@ -600,11 +607,13 @@ export const MovementMixin = {
     await this.r_BBCC();
     await this.r_BBB0();
     this.ww(0x5C7B, 0xC37D);
+    this.showReach(this.r_BDD1(this.rw(0xAC04)), u8(m[0xABFC] << 1));
     for (;;) {
       let k;
       if (m[V.ISCPU]) k = this.r_CCCB();
       else k = await this.r_BC96();
       if (k === 0x4B) {
+        this.clearRange();
         this.attr(0x41); this.r_BB57();
         this.r_BED7();
         const a = await this.r_C2F9(0xC2B1);
@@ -636,6 +645,7 @@ export const MovementMixin = {
       }
       break;
     }
+    this.clearRange();
     // $B9BB
     this.ww(0xC2F3, 0xC275);
     const aid = m[this.rw(V.P14)];

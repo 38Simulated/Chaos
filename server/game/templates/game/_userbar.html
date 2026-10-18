@@ -1,6 +1,7 @@
 <nav class="userbar">
   {% if user.is_authenticated %}
   <span>Logged in as <strong>{{ user.username }}</strong></span>
+  {% if perms.game.view_all_games %}<a href="{% url 'all_games' %}">All games</a>{% endif %}
   <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="small">Log out</button></form>
   {% else %}
   <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">Log in</a>

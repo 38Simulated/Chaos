@@ -47,9 +47,10 @@ function load(target = 0) {
   wizards = {}; turnSeat = null; ended = false;
   showRounds(null);
   overlay.textContent = '';
-  engine = new Chaos(gameImage(), { input, beeper, seed: data.seed, onEvent });
+  engine = new Chaos(gameImage(), { input, beeper, seed: data.seed, rules: data.rules, onEvent });
   input.engine = engine;
   renderer = new Renderer(canvas, engine.m, engine.spec);
+  renderer.hint = () => engine.rangeHint;
   seek(target);
   renderSeats();
   engine.run(data.seed).catch(err => { console.error(err); setStatus('Replay error: ' + err.message); });

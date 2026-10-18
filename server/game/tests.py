@@ -3,12 +3,13 @@ from datetime import timedelta
 from asgiref.sync import async_to_sync, sync_to_async
 from channels.testing import WebsocketCommunicator
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from chaos_site.asgi import application
 
+from . import rules
 from .models import Event, Game, Player
 
 
@@ -188,6 +189,128 @@ class ReplayTests(TestCase):
         client.post('/new/', {'name': 'Host', 'public_replay': 'on'})
         public = Game.objects.latest('created')
         self.assertEqual((private.public_replay, public.public_replay), (False, True))
+
+
+class ArchiveTests(TestCase):
+    """Finished public games, listed for anyone to watch again."""
+    def finished(self, name, public, minutes_ago=0):
+        game = create_game(Client(), name)
+        Game.objects.filter(pk=game.pk).update(
+            status=Game.FINISHED, survivors=[0], public_watch=public,
+            last_move=timezone.now() - timedelta(minutes=minutes_ago))
+        return Game.objects.get(pk=game.pk)
+
+    def test_lists_finished_public_games_latest_first(self):
+        old = self.finished('Morgana', True, minutes_ago=60)
+        new = self.finished('Gandalf', True)
+        private = self.finished('Nimue', False)
+        playing = create_game(Client(), 'Saruman')
+        Game.objects.filter(pk=playing.pk).update(status=Game.PLAYING, public_watch=True)
+        page = Client().get('/archive/')
+        content = page.content.decode()
+        self.assertLess(content.index('Gandalf'), content.index('Morgana'))
+        self.assertContains(page, f'/w/{new.watch_id}/replay/')
+        for hidden in ('Nimue', 'Saruman', old.code, new.code):
+            self.assertNotContains(page, hidden)
+        self.assertEqual(Client().get(f'/w/{old.watch_id}/replay.json').status_code, 200)
+
+    def test_search_by_player(self):
+        self.finished('Morgana', True)
+        self.finished('Gandalf', True)
+        page = Client().get('/archive/', {'q': 'morg'})
+        self.assertContains(page, 'Morgana')
+        self.assertNotContains(page, 'Gandalf')
+
+    def test_linked_from_the_front_page(self):
+        self.assertContains(Client().get('/'), 'href="/archive/"')
+
+
+class AdminTests(TestCase):
+    """Admins (the Admins group, given in the Django admin) see every game
+    and can watch any replay."""
+    def setUp(self):
+        self.private = create_game(Client(), 'Morgana')
+        Game.objects.filter(pk=self.private.pk).update(status=Game.FINISHED, survivors=[0])
+        self.lobby = create_game(Client(), 'Gandalf')
+        self.admin = User.objects.create_user('merlin', password='wand-of-oak-42')
+        self.admin.groups.add(Group.objects.get(name='Admins'))
+        self.client.force_login(self.admin)
+
+    def test_admins_see_every_game(self):
+        page = self.client.get('/games/')
+        self.assertContains(page, self.private.code)
+        self.assertContains(page, self.lobby.code)
+        self.assertContains(self.client.get('/'), 'All games')
+        found = self.client.get('/games/', {'q': 'morg'})
+        self.assertContains(found, self.private.code)
+        self.assertNotContains(found, self.lobby.code)
+        self.assertNotContains(self.client.get('/games/', {'show': 'finished'}), self.lobby.code)
+
+    def test_admins_can_watch_private_replays(self):
+        self.assertTemplateUsed(self.client.get(f'/g/{self.private.code}/replay/'), 'game/replay.html')
+        self.assertEqual(self.client.get(f'/g/{self.private.code}/replay.json').status_code, 200)
+
+    def test_other_users_cannot(self):
+        other = Client()
+        other.force_login(User.objects.create_user('nimue', password='wand-of-oak-42'))
+        for client in (other, Client()):
+            self.assertEqual(client.get('/games/').status_code, 404)
+            self.assertEqual(client.get(f'/g/{self.private.code}/replay/').status_code, 404)
+        self.assertNotContains(other.get('/'), 'All games')
+
+    def test_django_admin_is_at_its_path(self):
+        boss = Client()
+        boss.force_login(User.objects.create_superuser('boss', password='wand-of-oak-42'))
+        self.assertEqual(boss.get(f'/{settings.ADMIN_PATH}auth/group/').status_code, 200)
+
+    def test_superusers_are_admins(self):
+        boss = Client()
+        boss.force_login(User.objects.create_superuser('boss', password='wand-of-oak-42'))
+        self.assertContains(boss.get('/games/'), self.private.code)
+
+
+class CustomRulesTests(TestCase):
+    FORM = {'name': 'Host', 'custom': '1', 'turns': '30', 'next_key': 'on', 'ranges': 'on',
+            'turmoil': 'on', 'troll': 'on', 'ability': '0', 'spells': '14', 'stats': 'max',
+            'stats_for': 'computer'}
+
+    def test_parse_keeps_only_valid_changes(self):
+        self.assertEqual(rules.parse({'turns': '', 'ability': '', 'spells': '', 'stats': ''}), {})
+        self.assertEqual(rules.parse(self.FORM), {
+            'turns': 30, 'nextKey': True, 'ranges': True, 'turmoil': True, 'troll': True, 'ability': 0,
+            'spells': 14, 'stats': 'max', 'statsFor': 'computer'})
+        bad = {'turns': '4', 'ability': '4', 'spells': '21', 'stats': 'huge', 'stats_for': 'all'}
+        self.assertEqual(rules.parse(bad), {})
+        self.assertEqual(rules.parse({'turns': 'x', 'stats': 'equal', 'stats_for': 'nobody'}),
+                         {'stats': 'equal', 'statsFor': 'all'})
+
+    def test_normal_games_have_no_rules(self):
+        client = Client()
+        game = create_game(client)
+        self.assertEqual(game.rules, {})
+        page = client.get(f'/g/{game.code}/')
+        self.assertNotContains(page, 'Custom rules')
+        self.assertContains(page, '<script id="rules" type="application/json">{}</script>', html=True)
+
+    def test_custom_game_keeps_its_rules_for_players_watchers_and_replays(self):
+        self.assertContains(self.client.get('/new/custom/'), 'name="stats_for"')
+        host = Client()
+        host.post('/new/', dict(self.FORM, public_watch='on'))
+        game = Game.objects.latest('created')
+        self.assertEqual(game.rules['turns'], 30)
+        for page in (host.get(f'/g/{game.code}/'), Client().get(f'/w/{game.watch_id}/')):
+            self.assertContains(page, 'Custom rules')
+            self.assertContains(page, '30 turns')
+            self.assertContains(page, 'Computer wizards get the best stats')
+            self.assertContains(page, '"nextKey": true')
+        Game.objects.filter(pk=game.pk).update(status=Game.FINISHED)
+        self.assertEqual(host.get(f'/g/{game.code}/replay.json').json()['rules'], game.rules)
+        self.assertContains(host.get(f'/g/{game.code}/replay/'), 'Every wizard has ability 0')
+
+    def test_taken_name_goes_back_to_the_custom_form(self):
+        User.objects.create_user('merlin', password='wand-of-oak-42')
+        page = self.client.post('/new/', dict(self.FORM, name='merlin'))
+        self.assertTrue(page.url.startswith('/new/custom/?error='))
 
 
 class AccountTests(TestCase):
@@ -582,7 +705,8 @@ class SearchEngineTests(TestCase):
         Game.objects.filter(pk=game.pk).update(public_watch=True)
         for client, path in ((host, f'/g/{game.code}/'), (Client(), f'/g/{game.code}/'),
                              (Client(), f'/w/{game.watch_id}/'), (Client(), '/accounts/login/'),
-                             (Client(), '/accounts/signup/'), (Client(), '/?error=x')):
+                             (Client(), '/accounts/signup/'), (Client(), '/?error=x'),
+                             (Client(), '/new/custom/')):
             page = client.get(path)
             self.assertContains(page, self.NOINDEX, msg_prefix=path)
             self.assertNotContains(page, 'rel="canonical"', msg_prefix=path)
