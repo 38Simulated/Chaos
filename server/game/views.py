@@ -199,7 +199,7 @@ def create(request):
         game = Game.objects.create(show_spells=bool(request.POST.get('show_spells')),
                                    public_replay=bool(request.POST.get('public_replay')),
                                    public_watch=bool(request.POST.get('public_watch')),
-                                   rules=rules.parse(request.POST))
+                                   rules=rules.parse(request.POST if request.POST.get('custom') else {}))
         player = Player.objects.create(game=game, seat=0, name=name,
                                        user=_account(request))
     _session_players(request)[game.code] = player.token

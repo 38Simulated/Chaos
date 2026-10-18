@@ -3,8 +3,9 @@
 // like the seed). With no rules the engine plays exactly as the original.
 //
 //   turns     number of turns (default: 2 x wizards + 15)
-//   nextKey   N moves the cursor to the next piece that hasn't moved
-//   ranges    show how far the piece being moved, or shooting, or a spell can reach
+//   nextKey   N moves the cursor to the next piece that hasn't moved (every
+//             game created since 2026-10-18 has it; older games don't, so
+//             their logs play back as they were played)
 //   turmoil   Turmoil can be among a wizard's starting spells
 //   ability   every wizard's ability (0-3) instead of the random one
 //   spells    every wizard's number of spells (11-20) besides Disbelieve
@@ -13,6 +14,11 @@
 //             level's bonus
 //   statsFor  who the stats rule applies to: 'all', 'human' or 'computer'
 //   troll     the Troll can be among the starting spells and Magic Wood gifts
+//
+// The range indicators (how far the piece being moved, shooting, or a spell
+// can reach) are worked out in every game, into rangeHint; each page decides
+// whether to draw them. Older games may have a 'ranges' rule from when they
+// were a custom choice; nothing reads it now.
 import { BOARD, L2, L3, L4, V, u8, TROLL, TROLL_SPELL } from './core.js';
 
 // the rolls ($904B, 0-9) that give the lowest and highest stats
@@ -85,7 +91,6 @@ export const RulesMixin = {
   },
   // Flying ($B0A8) and shooting ($B8DD): every square within `reach` of `from`.
   showReach(from, reach) {
-    if (!this.rules.ranges) return;
     const f = (from - BOARD) & 0xFF;
     this.rangeHint = squares(i => i !== f && distance(f, i) <= reach);
   },
@@ -94,7 +99,6 @@ export const RulesMixin = {
   // step while it has any left). It walks through empty squares and corpses,
   // and may end on an occupied one (an attack).
   showWalk(from, points, engaged) {
-    if (!this.rules.ranges) return;
     const m = this.m, f = (from - BOARD) & 0xFF;
     const UNREACHED = -100;
     const left = new Int16Array(160).fill(UNREACHED);   // most points left on arrival

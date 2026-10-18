@@ -17,7 +17,8 @@
       <a href="#combat">Combat</a> &middot; <a href="#death-corpses-and-the-undead">Death and corpses</a> &middot;
       <a href="#fire-blobs-woods-and-castles">Fire, blobs, woods and castles</a> &middot;
       <a href="#computer-wizards">Computer wizards</a> &middot; <a href="#quirks-of-the-original">Quirks</a> &middot;
-      <a href="#left-out-of-the-original">Left out</a>
+      <a href="#left-out-of-the-original">Left out</a> &middot;
+      <a href="#custom-games">Custom games</a>
     </nav>
     <p>Numbers and dice:</p>
     <ul>
@@ -477,6 +478,23 @@
       <li><strong>Sleep.</strong> The square-information line can show "(ASLEEP)" after a creature's name, when one of its flags is set. Nothing ever sets that flag, so this is presumably what was left of Magic Sleep.</li>
     </ul>
     <p>Memory also holds over a hundred of the assembler's labels (such as <code>WALKY</code>, <code>RAISD</code> and <code>GETPL</code>). They aren't part of the game.</p>
+    <h3 id="custom-games">Custom games</h3>
+    <p>Everything above is the original game, which is what a normal Chaos Online game plays. A <strong>custom game</strong> (the <em>Custom game</em> button on the front page) can change some of it. The rules are chosen when the game is created, are the same for every player, and are listed on the game and replay pages. Anything left as &ldquo;original&rdquo; plays as above.</p>
+    <div class="table"><table>
+      <thead><tr><th>Rule</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td>Number of turns</td><td>5 to 99 turns instead of 2 &times; wizards + 15</td></tr>
+        <tr><td>Spells for each wizard</td><td>Every wizard, human or computer, starts with this many spells (11-20) besides Disbelieve, instead of the rolled number</td></tr>
+        <tr><td>Ability</td><td>Every wizard has this ability (0-3) instead of the rolled one. Ability 3 adds 30% to every casting chance, which the original never gives</td></tr>
+        <tr><td>Wizards' statistics</td><td>Combat, defence, manoeuvre and magic resistance are the best (5, 5, 7, 8), the worst (1, 1, 3, 6) or the same random set for everyone, for all wizards, human wizards only or computer wizards only. The computer level's bonus is left out for the wizards it applies to, so they are equal</td></tr>
+        <tr><td>Turmoil</td><td>Turmoil can be a starting spell, as often as Magic Bolt</td></tr>
+        <tr><td>The Troll</td><td>The Troll (<a href="#left-out-of-the-original">above</a>) can be a starting spell or a Magic Wood gift, as often as most spells. It is cast like any creature (chance 6, range 1, chaos 1, and it can be an illusion), and fights, dies, leaves a corpse and can be raised like the others</td></tr>
+      </tbody></table></div>
+    <p>Every Chaos Online game, custom or not, also has two helps the original doesn't:</p>
+    <ul>
+      <li><strong><kbd>N</kbd> key.</strong> While choosing a piece to move, <kbd>N</kbd> puts the cursor on the next piece of yours (or your wizard) that can still move this turn. Games created before 18 October 2026 don't have it, so that their recorded keys play back as they were played.</li>
+      <li><strong>Range indicators.</strong> While a piece moves or shoots, or a spell's target is being picked, the squares it can reach are marked: blue dots on empty squares and blue paper behind pieces. Disbelieve and the spells with no range (Vengeance, Decree, Dark Power, Justice) show none. They are off until a player or watcher switches them on for themselves (<kbd>R</kbd> while the cursor is on the board); they are only drawn on the screen, so they never change the game.</li>
+    </ul>
   </article>
 </main>
 {% endblock %}

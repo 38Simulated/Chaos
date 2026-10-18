@@ -2,7 +2,13 @@
 
 A game's rules are stored with it and handed to every browser's engine (see
 static/game/js/engine/rules.js), like the seed. Only rules that differ from
-the original are stored, so an empty dict is the original game.
+the original are stored, so an empty dict is exactly the original game.
+
+Two rules were once custom choices and still matter for older games:
+nextKey (N jumps to the next piece that can move) is now given to every new
+game, but not to older ones, because it changes how their keys play back;
+and ranges (range indicators) is now each viewer's own choice in their
+browser, since it is display only, so it is no longer stored.
 """
 
 TURNS = range(5, 100)
@@ -11,8 +17,6 @@ SPELLS = range(11, 21)
 STATS = {'equal': 'the same random stats', 'max': 'the best stats', 'min': 'the worst stats'}
 STATS_FOR = {'all': 'every wizard', 'human': 'human wizards', 'computer': 'computer wizards'}
 SWITCHES = {
-    'nextKey': ('next_key', 'N moves the cursor to the next piece that hasn\'t moved'),
-    'ranges': ('ranges', 'Movement, shooting and spell ranges are shown on the board'),
     'turmoil': ('turmoil', 'Turmoil can be a starting spell'),
     'troll': ('troll', 'The Troll, left out of the original, is in the game'),
 }
@@ -26,10 +30,15 @@ def _number(value, allowed):
     return n if n in allowed else None
 
 
+# rules every new game gets, which aren't listed as custom
+STANDARD = {'nextKey': True}
+
+
 def parse(data):
-    """The rules from the custom game form (a QueryDict or dict). Fields left
-    at "original", or invalid, are left out."""
-    rules = {}
+    """The rules for a new game: the standard ones, plus the custom game
+    form's (a QueryDict or dict; empty for a normal game). Fields left at
+    "original", or invalid, are left out."""
+    rules = dict(STANDARD)
     turns = _number(data.get('turns'), TURNS)
     if turns is not None:
         rules['turns'] = turns

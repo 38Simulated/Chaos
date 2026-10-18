@@ -27,7 +27,7 @@
         <span class="code">{{ row.game.code }}</span>
         <span>{% for p in row.players %}{{ p.name }}{% if p.registered %}<span class="reg" title="Registered player">&#10003;</span>{% endif %}{% if not forloop.last %}, {% endif %}{% empty %}No players{% endfor %}</span>
         <span class="state">{{ row.state }}</span>
-        {% if row.game.rules %}<span class="hint" title="{{ row.game.rule_list|join:'. ' }}">Custom</span>{% endif %}
+        {% if row.game.rule_list %}<span class="hint" title="{{ row.game.rule_list|join:'. ' }}">Custom</span>{% endif %}
         {% if row.game.public_watch %}<span class="hint">Public</span>{% endif %}
         {% if row.game.status == 'finished' %}<a href="{% url 'replay' row.game.code %}">Watch replay</a>{% endif %}
         <span class="hint">{{ row.last|timesince }} ago</span>

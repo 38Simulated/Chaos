@@ -236,3 +236,4 @@ button:disabled:hover { background: transparent; color: var(--accent); }
 /* a card's heading with a link on the right */
 .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
 .card-head a { font-size: .9rem; }
+.pad .actions .wide3 { grid-column: span 3; }

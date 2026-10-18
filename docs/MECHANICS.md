@@ -30,6 +30,7 @@ Numbers and dice:
 10. [Computer wizards](#computer-wizards)
 11. [Quirks of the original](#quirks-of-the-original)
 12. [Left out of the original](#left-out-of-the-original)
+13. [Custom games](#custom-games)
 
 ## The game and its turns
 
@@ -737,3 +738,35 @@ plays with the statistics and graphics below.
 
 Memory also holds over a hundred of the assembler's labels (such as `WALKY`,
 `RAISD` and `GETPL`, around `$A3BE`-`$ABBF`). They aren't part of the game.
+
+## Custom games
+
+Everything above is the original game, which is what a normal Chaos Online game
+plays. A **custom game** (the *Custom game* button on the front page) can change
+some of it. The rules are chosen when the game is created, are the same for
+every player, and are listed on the game and replay pages. Anything left as
+"original" plays as above. The engine's side is in `engine/rules.js`.
+
+| Rule | Effect |
+| --- | --- |
+| Number of turns | 5 to 99 turns instead of 2 × wizards + 15 |
+| Spells for each wizard | Every wizard, human or computer, starts with this many spells (11-20) besides Disbelieve, instead of the rolled number |
+| Ability | Every wizard has this ability (0-3) instead of the rolled one. Ability 3 adds 30% to every casting chance, which the original never gives |
+| Wizards' statistics | Combat, defence, manoeuvre and magic resistance are the best (5, 5, 7, 8), the worst (1, 1, 3, 6) or the same random set for everyone, for all wizards, human wizards only or computer wizards only. The computer level's bonus is left out for the wizards it applies to, so they are equal. "The same random set" is the rolls of the first wizard it applies to |
+| Turmoil | Turmoil can be a starting spell: the start draws from spell numbers 2-65, so Turmoil's two numbers come up as often as Magic Bolt's |
+| The Troll | The Troll ([above](#left-out-of-the-original)) can be a starting spell or a Magic Wood gift, as often as a spell with one number. It is cast like any creature (chance 6, range 1, chaos 1, and it can be an illusion), and fights, dies, leaves a corpse and can be raised like the others |
+
+Every Chaos Online game, custom or not, also has two helps the original
+doesn't:
+
+- **N key.** While choosing a piece to move, <kbd>N</kbd> puts the cursor on
+  the next piece of yours (or your wizard) that can still move this turn.
+  Games created before 18 October 2026 don't have it, so that their recorded
+  keys play back as they were played.
+- **Range indicators.** While a piece moves or shoots, or a spell's target is
+  being picked, the squares it can reach are marked: blue dots on empty
+  squares and blue paper behind pieces. Disbelieve and the spells with no
+  range (Vengeance, Decree, Dark Power, Justice) show none. They are off
+  until a player or watcher switches them on for themselves (<kbd>R</kbd> while
+  the cursor is on the board); they are only drawn on the screen, so they
+  never change the game.

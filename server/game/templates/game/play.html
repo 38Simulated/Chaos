@@ -30,7 +30,7 @@
         <a href="{% url 'index' %}" class="small-link">Home</a></div>
       {% endif %}
       <div id="status" class="status">Connecting&hellip;</div>
-      {% if game.rules %}
+      {% if game.rule_list %}
       <div class="rules"><span class="label">Custom rules</span>
         <ul>{% for line in game.rule_list %}<li>{{ line }}</li>{% endfor %}</ul></div>
       {% endif %}
@@ -74,8 +74,11 @@
       <p><kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> <kbd>A</kbd> <kbd>D</kbd> <kbd>Z</kbd><kbd>X</kbd><kbd>C</kbd> move cursor
         &middot; <kbd>S</kbd> select &middot; <kbd>K</kbd> cancel &middot; <kbd>I</kbd> info
         &middot; <kbd>1</kbd>&ndash;<kbd>8</kbd> show a wizard's creations &middot; <kbd>0</kbd> end turn{% if game.rules.nextKey %}
-        &middot; <kbd>N</kbd> next piece to move{% endif %}</p>
+        &middot; <kbd>N</kbd> next piece to move{% endif %}
+        &middot; <kbd>R</kbd> <span class="ranges-state">ranges off</span></p>
       <label class="check pad-check"><input type="checkbox" id="pad-on"> On-screen keys (for phones and tablets)</label>
+      {% else %}
+      <p><kbd>R</kbd> <span class="ranges-state">ranges off</span></p>
       {% endif %}
       <div class="sound">
         <label class="check"><input type="checkbox" id="sound" checked> Sound</label>
