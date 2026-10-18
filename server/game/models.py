@@ -140,6 +140,9 @@ class Event(models.Model):
     seat = models.IntegerField()
     kind = models.CharField(max_length=10)    # 'down', 'up', 'takeover'
     code = models.IntegerField(default=0)
+    # when the server got it, so replays can keep the players' timing; None
+    # for events recorded before times were kept
+    at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['seq']

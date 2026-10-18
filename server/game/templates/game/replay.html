@@ -4,10 +4,12 @@
 {% block indexing %}<meta name="robots" content="noindex">{% endblock %}
 {% block body %}
 <div class="play">
+  <div class="screen-col">
   <section class="screen-wrap">
     <canvas id="screen" width="320" height="240"></canvas>
     <div id="overlay" class="overlay"></div>
   </section>
+  </div>
   <aside class="side">
     <div class="box">
       <div class="row">{% if room %}<span class="label">Replay of</span> <strong id="code">{{ room }}</strong>{% else %}<span class="label">Replay of a public game</span>{% endif %}
@@ -39,6 +41,29 @@
         </select>
         <button id="toend" class="small" title="Jump to the result">Skip to end</button>
       </div>
+      <label class="row">Timing
+        <select id="timing">
+          <option value="real">As played</option>
+          <option value="0">No pause between keys</option>
+          <option value="0.25">&frac14; second between keys</option>
+          <option value="0.5">&frac12; second between keys</option>
+          <option value="1">1 second between keys</option>
+          <option value="2">2 seconds between keys</option>
+        </select>
+      </label>
+      <label class="row" id="maxwait-row">Cut waits to at most
+        <select id="maxwait">
+          <option value="1">1 second</option>
+          <option value="2">2 seconds</option>
+          <option value="5" selected>5 seconds</option>
+          <option value="10">10 seconds</option>
+          <option value="30">30 seconds</option>
+        </select>
+      </label>
+      <p id="timing-hint" class="hint">&ldquo;As played&rdquo; keeps the time between the players' keys,
+        with long waits (such as a player coming back later) cut short.</p>
+      <p id="untimed-hint" class="hint hidden">This game was played before key timings were recorded,
+        so a fixed pause stands in for the players' thinking time.</p>
       <div class="sound">
         <label class="check"><input type="checkbox" id="sound" checked> Sound</label>
         <input type="range" id="volume" min="0" max="100" step="5" value="50" aria-label="Volume" title="Volume">
