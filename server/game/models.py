@@ -64,6 +64,11 @@ class Game(models.Model):
     # custom rules (game/rules.py), fixed when the game is created; {} is the original game
     rules = models.JSONField(default=dict, blank=True)
 
+    class Meta:
+        # given to site admins in the Django admin (the Admins group has it):
+        # they see every game on the All games page and can watch any replay
+        permissions = [('view_all_games', 'Can see and watch every game')]
+
     def __str__(self):
         return self.code
 

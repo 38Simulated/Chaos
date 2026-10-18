@@ -227,3 +227,8 @@ button:disabled:hover { background: transparent; color: var(--accent); }
 .public .hint { margin: 0; }
 #copy-watch { align-self: flex-start; }
 .mygames.live h2 { color: var(--magenta); }
+
+/* all games (admins) */
+.allgames .search { display: flex; gap: .5rem; align-items: center; }
+.allgames .search input { flex: 1; min-width: 0; }
+.allgames .pages { justify-content: center; margin-top: .5rem; }

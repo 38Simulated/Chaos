@@ -3,7 +3,7 @@ from datetime import timedelta
 from asgiref.sync import async_to_sync, sync_to_async
 from channels.testing import WebsocketCommunicator
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
@@ -189,6 +189,45 @@ class ReplayTests(TestCase):
         client.post('/new/', {'name': 'Host', 'public_replay': 'on'})
         public = Game.objects.latest('created')
         self.assertEqual((private.public_replay, public.public_replay), (False, True))
+
+
+class AdminTests(TestCase):
+    """Admins (the Admins group, given in the Django admin) see every game
+    and can watch any replay."""
+    def setUp(self):
+        self.private = create_game(Client(), 'Morgana')
+        Game.objects.filter(pk=self.private.pk).update(status=Game.FINISHED, survivors=[0])
+        self.lobby = create_game(Client(), 'Gandalf')
+        self.admin = User.objects.create_user('merlin', password='wand-of-oak-42')
+        self.admin.groups.add(Group.objects.get(name='Admins'))
+        self.client.force_login(self.admin)
+
+    def test_admins_see_every_game(self):
+        page = self.client.get('/games/')
+        self.assertContains(page, self.private.code)
+        self.assertContains(page, self.lobby.code)
+        self.assertContains(self.client.get('/'), 'All games')
+        found = self.client.get('/games/', {'q': 'morg'})
+        self.assertContains(found, self.private.code)
+        self.assertNotContains(found, self.lobby.code)
+        self.assertNotContains(self.client.get('/games/', {'show': 'finished'}), self.lobby.code)
+
+    def test_admins_can_watch_private_replays(self):
+        self.assertTemplateUsed(self.client.get(f'/g/{self.private.code}/replay/'), 'game/replay.html')
+        self.assertEqual(self.client.get(f'/g/{self.private.code}/replay.json').status_code, 200)
+
+    def test_other_users_cannot(self):
+        other = Client()
+        other.force_login(User.objects.create_user('nimue', password='wand-of-oak-42'))
+        for client in (other, Client()):
+            self.assertEqual(client.get('/games/').status_code, 404)
+            self.assertEqual(client.get(f'/g/{self.private.code}/replay/').status_code, 404)
+        self.assertNotContains(other.get('/'), 'All games')
+
+    def test_superusers_are_admins(self):
+        boss = Client()
+        boss.force_login(User.objects.create_superuser('boss', password='wand-of-oak-42'))
+        self.assertContains(boss.get('/games/'), self.private.code)
 
 
 class CustomRulesTests(TestCase):
