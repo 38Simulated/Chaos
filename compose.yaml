@@ -23,6 +23,8 @@ services:
       DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
       DATABASE_URL: postgres://chaos:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/chaos
       REDIS_URL: redis://redis:6379/0
+      # where the Django admin is; empty: no admin
+      DJANGO_ADMIN_PATH: ${DJANGO_ADMIN_PATH:-}
       # shown in the page footer next to the version
       CHAOS_COMMIT: ${CHAOS_COMMIT:-}
     ports:

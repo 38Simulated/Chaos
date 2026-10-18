@@ -65,7 +65,7 @@ pass WebSocket upgrades through for `/ws/`.
 
 ### Hostinger VPS
 
-`.github/workflows/deploy.yml` deploys every push to `main` with Hostinger's
+`.github/workflows/deploy.yml` deploys every push to the `production` branch with Hostinger's
 `deploy-on-vps` action. Hostinger's Docker Manager fetches the pushed commit and
 runs `compose.hostinger.yaml`, which builds the image on the VPS and puts the
 site behind the VPS's existing Traefik for HTTPS. Setup, once:
@@ -89,6 +89,21 @@ site behind the VPS's existing Traefik for HTTPS. Setup, once:
    `python -c "import secrets; print(secrets.token_urlsafe(50))"`: the action
    pastes the values into a shell command, so keep to letters, digits, `-`
    and `_`.
+5. For the Django admin, add the secret `DJANGO_ADMIN_PATH`: a path that is
+   hard to guess, such as `manage-` and some random letters (the same rule on
+   characters applies). Without it the site has no admin. After the next
+   deploy, create an account for it on the VPS:
+   `docker compose -p chaos-online -f compose.hostinger.yaml exec web python manage.py createsuperuser`
+   (or from the web container's terminal in Docker Manager:
+   `python manage.py createsuperuser`). The admin is then at
+   `https://<DOMAIN>/<DJANGO_ADMIN_PATH>/`.
+
+### Admins
+
+Users in the **Admins** group (Django admin > Users > the user > Groups), and
+superusers, get an "All games" link: a list of every game, whoever played it,
+where they can watch the replay of any finished game. They don't need staff
+status or access to the Django admin.
 
 The workflow passes when Hostinger accepts the deployment. Whether the build and
 migrations then worked shows in hPanel's Docker Manager.

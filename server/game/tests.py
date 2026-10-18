@@ -224,6 +224,11 @@ class AdminTests(TestCase):
             self.assertEqual(client.get(f'/g/{self.private.code}/replay/').status_code, 404)
         self.assertNotContains(other.get('/'), 'All games')
 
+    def test_django_admin_is_at_its_path(self):
+        boss = Client()
+        boss.force_login(User.objects.create_superuser('boss', password='wand-of-oak-42'))
+        self.assertEqual(boss.get(f'/{settings.ADMIN_PATH}auth/group/').status_code, 200)
+
     def test_superusers_are_admins(self):
         boss = Client()
         boss.force_login(User.objects.create_superuser('boss', password='wand-of-oak-42'))
