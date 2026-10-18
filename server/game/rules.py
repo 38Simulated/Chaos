@@ -12,8 +12,9 @@ STATS = {'equal': 'the same random stats', 'max': 'the best stats', 'min': 'the 
 STATS_FOR = {'all': 'every wizard', 'human': 'human wizards', 'computer': 'computer wizards'}
 SWITCHES = {
     'nextKey': ('next_key', 'N moves the cursor to the next piece that hasn\'t moved'),
-    'ranges': ('ranges', 'Movement and shooting ranges are shown on the board'),
+    'ranges': ('ranges', 'Movement, shooting and spell ranges are shown on the board'),
     'turmoil': ('turmoil', 'Turmoil can be a starting spell'),
+    'troll': ('troll', 'The Troll, left out of the original, is in the game'),
 }
 
 

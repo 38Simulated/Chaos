@@ -4,7 +4,7 @@
 //
 //   turns     number of turns (default: 2 x wizards + 15)
 //   nextKey   N moves the cursor to the next piece that hasn't moved
-//   ranges    show how far the piece being moved, or shooting, can reach
+//   ranges    show how far the piece being moved, or shooting, or a spell can reach
 //   turmoil   Turmoil can be among a wizard's starting spells
 //   ability   every wizard's ability (0-3) instead of the random one
 //   spells    every wizard's number of spells (11-20) besides Disbelieve
@@ -12,7 +12,8 @@
 //             defence, manoeuvre and magic resistance, without the computer
 //             level's bonus
 //   statsFor  who the stats rule applies to: 'all', 'human' or 'computer'
-import { BOARD, L2, L3, L4, V, u8 } from './core.js';
+//   troll     the Troll can be among the starting spells and Magic Wood gifts
+import { BOARD, L2, L3, L4, V, u8, TROLL, TROLL_SPELL } from './core.js';
 
 // the rolls ($904B, 0-9) that give the lowest and highest stats
 const STAT_ROLLS = { min: [0, 0, 0, 0], max: [9, 9, 9, 9] };
@@ -32,6 +33,15 @@ export function distance(i, j) {
 }
 
 export const RulesMixin = {
+  // Set up memory for the rules at the start of a game.
+  applyRules() {
+    if (this.rules.troll) {
+      // spell entry, as in the table at $7D60: name (message = its id), casting
+      // chance 6, range 3, chaos 1, computer priority 18, creature handler $9975
+      this.m.set([TROLL, 6, 3, 0xFF, 18, 0x75, 0x99], TROLL_SPELL);
+    }
+  },
+
   // ---- stats -------------------------------------------------------------------
   // Does the stats rule apply to the wizard being set up ($AC2E: computer)?
   statsRuleApplies() {
@@ -59,7 +69,7 @@ export const RulesMixin = {
       const a = BOARD + i, id = m[a];
       if (id === 0 || m[a + L2] === 4 || (m[a + L3] & 0x80)) continue;
       const mine = id === wiz || m[a + L4] === wiz ||
-        ((m[a + L3] & 7) === p && ((id >= 2 && id <= 0x21) || id === 0x25));
+        ((m[a + L3] & 7) === p && ((id >= 2 && id <= 0x21) || id === 0x25 || this.isTroll(id)));
       if (mine) return (((i >> 4) + 1) << 8) | ((i & 0x0F) + 1);
     }
     return bc;
@@ -67,6 +77,12 @@ export const RulesMixin = {
 
   // ---- range indicators (display only: nothing here feeds back into the game) ----
   clearRange() { this.rangeHint = null; },
+  // A human choosing where to cast a spell ($9786 checks its range): the key,
+  // with the squares in range shown while they choose.
+  async castKey() {
+    this.showReach(this.rw(V.P14), this.m[this.ix + 2]);
+    try { return await this.r_BC96(); } finally { this.clearRange(); }
+  },
   // Flying ($B0A8) and shooting ($B8DD): every square within `reach` of `from`.
   showReach(from, reach) {
     if (!this.rules.ranges) return;

@@ -365,7 +365,7 @@ export const UiMixin = {
       if ((i & 0x0F) === 0x0F) continue;
       const a = BOARD + i, id = m[a];
       if (id === 0 || this.losTransparent(i)) continue;
-      const rec = this.rw(0xE3E0 + ((id - 1) * 2 & 0xFF));
+      const rec = this.record(id);
       const spr = this.rw(rec + 0x17);
       const row = ((i >> 4) * 2 + 1) * 8, col = ((i & 15) * 2 + 1) * 8;
       for (let q = 0; q < 4; q++) {

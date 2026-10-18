@@ -1,5 +1,5 @@
 // Game setup, main round loop and end-of-game screens ($89B0-$8F9A).
-import { BOARD, L3, L4, V, HOST, ANY, M, P, u8, s8 } from './core.js';
+import { BOARD, L3, L4, V, HOST, ANY, M, P, u8, s8, TROLL } from './core.js';
 
 export const SetupMixin = {
   // $89B0: wait for a digit 1-8 (2-8 if $8323 set), echo it, return 0-7
@@ -292,9 +292,11 @@ export const SetupMixin = {
     this.ww(V.CD86, 0xD3F2);
     for (let i = 0; i < n; i++) {
       let a;
-      // 2-63: Turmoil (64, 65) only comes from Magic Wood, unless a rule allows it
+      // 2-63: Turmoil (64, 65) only comes from Magic Wood, unless a rule allows
+      // it. With the Troll, 1 (Disbelieve, never drawn) stands for the Troll.
       const mask = this.rules.turmoil ? 0x7F : 0x3F;
-      do { a = this.rndByte() & mask; } while (a < 2 || a >= 0x42);
+      do { a = this.rndByte() & mask; } while ((a < 2 || a >= 0x42) && !(a === 1 && this.rules.troll));
+      if (a === 1) a = TROLL;
       m[V.SPELL] = a;
       this.ww(V.CD86, this.rw(V.CD86) + 1);
       const ix = this.r_92F9();
@@ -350,7 +352,8 @@ export const SetupMixin = {
       for (let k = 0; k < 10; k++) await this.r_96E6();
       this.r_BED7();
       let s;
-      do { this.r_904B(); s = m[0x907A]; } while (M(s, 2) || P(s, 0x41));
+      do { this.r_904B(); s = m[0x907A]; } while ((M(s, 2) || P(s, 0x41)) && !(s === 1 && this.rules.troll));
+      if (s === 1) s = TROLL;   // (custom rule: the Troll)
       m[V.SPELL] = s;
       this.r_92AA();
       let h = this.rw(V.LISTPTR) + 2;

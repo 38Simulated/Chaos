@@ -1,5 +1,5 @@
 // Spell selection menus, casting phase and all spell handlers ($8357-$A1E5).
-import { BOARD, L1, L2, L3, L4, L5, V, M, P, u8, s8 } from './core.js';
+import { BOARD, L1, L2, L3, L4, L5, V, M, P, u8, s8, TROLL_SPELL } from './core.js';
 
 // "H+L == 0" null test used by the original on board addresses. Note that the
 // real square $E020 (index 1) also passes this test - the original treats it
@@ -22,7 +22,7 @@ export const SpellsMixin = {
   // $BE0A: stat E of object D. Object 0 (an empty square) has no record: its
   // pointer is $2020, so the original reads its stats from the Spectrum ROM.
   r_BE0A(d, e) {
-    const rec = this.rw(0xE3E0 + ((d - 1) * 2 & 0xFF));
+    const rec = this.record(d);
     if (rec === 0x2020 && e >= 0x0D && e <= 0x15) return OBJECT0_STATS[e - 0x0D];
     return this.m[(rec + e) & 0xFFFF];
   },
@@ -48,7 +48,7 @@ export const SpellsMixin = {
   // $9153 (casting chance 0-9). Returns the entry address (IX).
   r_92F9() {
     const m = this.m;
-    const ix = 0x7D60 + 7 * u8(m[V.SPELL] - 1);
+    const ix = this.isTroll(m[V.SPELL]) ? TROLL_SPELL : 0x7D60 + 7 * u8(m[V.SPELL] - 1);
     this.ix = ix;
     this.ww(V.SPELLPTR, ix);
     m[V.SPELLALIGN] = m[ix + 3];
@@ -253,7 +253,7 @@ export const SpellsMixin = {
       if (m[0x9384] === 0) { await this.r_94A7(); continue; }
       const id = m[V.SPELL];
       m[0x9156 + m[V.PLAYER]] = id;
-      if (M(id, 2) || P(id, 0x22)) return;
+      if (!this.isTroll(id) && (M(id, 2) || P(id, 0x22))) return;
       this.r_BED7();
       this.attr(0x47); this.r_BAFB(0x5E, 0x16, 0);
       await this.r_BBCC();
@@ -378,7 +378,7 @@ export const SpellsMixin = {
     for (let i = 0; i < 0x9F; i++) {
       const a = BOARD + i, id = m[a];
       this.ww(V.P12, a);
-      if (M(id, 2) || P(id, 0x22)) continue;
+      if (!this.isTroll(id) && (M(id, 2) || P(id, 0x22))) continue;
       if (u8(m[a + L4] - 0x29) === p) continue;
       if ((m[a + L3] & 7) === p) { m[V.AIFLAG + p] = 0; return; }
     }
@@ -470,7 +470,7 @@ export const SpellsMixin = {
       // $983F
       let k;
       for (;;) {
-        k = await this.r_BC96();
+        k = await this.castKey();
         if (k === 0x4B) { await this.r_C2F9(0xC2B1); this.ei = true; return; }
         if (k !== 0x53) continue;
         await this.r_BBCC();
@@ -774,7 +774,7 @@ export const SpellsMixin = {
     const m = this.m;
     if (m[V.ISCPU]) { await this.r_9D8A(); return; }
     for (;;) {
-      const k = await this.r_BC96();
+      const k = await this.castKey();
       if (k === 0x4B) { await this.r_C2F9(0xC2B1); this.ei = true; return; }
       if (k !== 0x53) continue;
       const t = this.rw(V.P12);
@@ -1170,7 +1170,7 @@ export const SpellsMixin = {
       this.r_BED7();
       m[0x5C91] = 3;
       for (;;) {
-        const k = await this.r_BC96();
+        const k = await this.castKey();
         if (k === 0x4B) { await this.r_C2F9(0xC2B1); this.ei = true; return; }
         if (k !== 0x53) continue;
         if (this.r_85EC()) continue;
@@ -1227,7 +1227,7 @@ export const SpellsMixin = {
       this.r_BED7();
       m[0x5C91] = 3;
       for (;;) {
-        const k = await this.r_BC96();
+        const k = await this.castKey();
         if (k === 0x4B) { await this.r_C2F9(0xC2B1); this.ei = true; return; }
         if (k !== 0x53) continue;
         const t = this.rw(V.P12);
@@ -1244,7 +1244,7 @@ export const SpellsMixin = {
       this.ww(V.P12, a);
       m[V.SCRATCH] = m[a];
       if (m[a + L2] !== 4) continue;
-      const v = m[0xC6D4 + u8(m[V.SCRATCH] - 2)];
+      const v = this.pieceValue(m[V.SCRATCH]);
       const h = this.rw(V.CD86);
       m[h] = v; m[h + 1] = i;
       this.ww(V.CD86, h + 2);

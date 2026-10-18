@@ -193,12 +193,13 @@ class ReplayTests(TestCase):
 
 class CustomRulesTests(TestCase):
     FORM = {'name': 'Host', 'custom': '1', 'turns': '30', 'next_key': 'on', 'ranges': 'on',
-            'turmoil': 'on', 'ability': '0', 'spells': '14', 'stats': 'max', 'stats_for': 'computer'}
+            'turmoil': 'on', 'troll': 'on', 'ability': '0', 'spells': '14', 'stats': 'max',
+            'stats_for': 'computer'}
 
     def test_parse_keeps_only_valid_changes(self):
         self.assertEqual(rules.parse({'turns': '', 'ability': '', 'spells': '', 'stats': ''}), {})
         self.assertEqual(rules.parse(self.FORM), {
-            'turns': 30, 'nextKey': True, 'ranges': True, 'turmoil': True, 'ability': 0,
+            'turns': 30, 'nextKey': True, 'ranges': True, 'turmoil': True, 'troll': True, 'ability': 0,
             'spells': 14, 'stats': 'max', 'statsFor': 'computer'})
         bad = {'turns': '4', 'ability': '4', 'spells': '21', 'stats': 'huge', 'stats_for': 'all'}
         self.assertEqual(rules.parse(bad), {})

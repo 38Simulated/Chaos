@@ -414,7 +414,7 @@ export const MovementMixin = {
     if (!(aw & 0x80)) {
       const fa = V.WFLAGS + aw;
       m[fa] &= ~0x08;
-      const ix = this.rw(0xE3E0 + ((att - 1) * 2 & 0xFF));
+      const ix = this.record(att);
       m[ix + 0x1C] = m[ix + 0x19];
       m[ix + 0x22] = m[ix + 0x19];
       const wpn = m[fa] & 7;
@@ -521,7 +521,7 @@ export const MovementMixin = {
     m[V.DEADCOUNT] = u8(m[V.DEADCOUNT] + 1);
     await this.r_C2F9(0xC2A7);
     const sq = this.rw(V.P12);
-    const rec = this.rw(0xE3E0 + ((m[sq] - 1) * 2 & 0xFF));
+    const rec = this.record(m[sq]);
     const spr = this.rw(rec + 0x17);
     this.onEvent({ type: 'wizarddead', seat: u8(m[sq] - 0x29) });
     for (let b = 8; b > 0; b--) {

@@ -153,6 +153,15 @@ export class Spectrum {
 }
 
 // ---- Canvas renderer ---------------------------------------------------------
+// Range indicators, drawn as a Spectrum program could have drawn them (two
+// colours per character cell): an empty square gets a grid of blue dots, and
+// an occupied one blue paper (magenta under blue ink, so the piece still shows).
+const HINT_DOTS = 1, HINT_PAPER = 2;
+function hintAttr(at) {
+  const paper = (at & 7) === 1 ? 3 : 1;
+  return (at & 0xC7) | (paper << 3);
+}
+
 export class Renderer {
   constructor(canvas, mem, spec) {
     this.canvas = canvas;
@@ -176,6 +185,7 @@ export class Renderer {
     const m = this.m, d = this.img.data, W = this.canvas.width;
     const flashOn = this.flashFrame >= 16;
     const bc = PALETTE[this.spec.border & 7];
+    const hinted = this.hintCells();
     for (let i = 0; i < d.length; i += 4) { d[i] = bc[0]; d[i + 1] = bc[1]; d[i + 2] = bc[2]; d[i + 3] = 255; }
     for (let y = 0; y < 192; y++) {
       const third = y >> 6, line = y & 7, crow = (y >> 3) & 7;
@@ -183,8 +193,10 @@ export class Renderer {
       const attrBase = 0x5800 + (y >> 3) * 32;
       let o = ((y + this.bh) * W + this.bw) * 4;
       for (let cx = 0; cx < 32; cx++) {
-        const byte = m[rowBase + cx];
-        const at = m[attrBase + cx];
+        let byte = m[rowBase + cx], at = m[attrBase + cx];
+        const h = hinted && hinted[(y >> 3) * 32 + cx];
+        if (h === HINT_PAPER) at = hintAttr(at);
+        else if (h === HINT_DOTS) { byte = (y & 1) ? 0 : 0x55; at = (at & 0xF8) | 1; }
         const bright = (at & 0x40) ? 8 : 0;
         let ink = (at & 7) | bright, paper = ((at >> 3) & 7) | bright;
         if ((at & 0x80) && flashOn) { const t = ink; ink = paper; paper = t; }
@@ -196,21 +208,30 @@ export class Renderer {
       }
     }
     this.ctx.putImageData(this.img, 0, 0);
-    this.drawHint();
   }
 
-  // Tint the board squares in the mask (custom rule: range indicators). Square
-  // i is at character row 2*(i >> 4) + 1, column 2*(i & 15) + 1.
-  drawHint() {
+  // How to highlight each character cell (32 x 24) for the board squares in
+  // the hint mask (custom rule: range indicators), or null. Square i is the
+  // 2 x 2 cells from row 2*(i >> 4) + 1, column 2*(i & 15) + 1. Only the
+  // picture changes: screen memory is left alone.
+  hintCells() {
     const mask = this.hint && this.hint();
-    if (!mask) return;
-    const ctx = this.ctx;
-    ctx.fillStyle = 'rgba(255, 215, 0, 0.28)';
+    if (!mask) return null;
+    const cells = new Uint8Array(32 * 24);
     for (let i = 0; i < 160; i++) {
       if (!mask[i]) continue;
-      const x = this.bw + ((i & 0x0F) * 2 + 1) * 8, y = this.bh + ((i >> 4) * 2 + 1) * 8;
-      ctx.fillRect(x + 1, y + 1, 14, 14);
+      const c = ((i >> 4) * 2 + 1) * 32 + (i & 0x0F) * 2 + 1;
+      const quad = [c, c + 1, c + 32, c + 33];
+      const how = quad.every(q => this.cellBlank(q >> 5, q & 31)) ? HINT_DOTS : HINT_PAPER;
+      for (const q of quad) cells[q] = how;
     }
+    return cells;
+  }
+  // Has character cell (row, col) no ink pixels?
+  cellBlank(row, col) {
+    const base = 0x4000 | ((row >> 3) << 11) | ((row & 7) << 5) | col;
+    for (let line = 0; line < 8; line++) if (this.m[base | (line << 8)]) return false;
+    return true;
   }
 }
 

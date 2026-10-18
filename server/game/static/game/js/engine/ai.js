@@ -1,7 +1,7 @@
 // Computer wizards ($C63D-$CDD2). The AI works through scratch lists at $D3F2
 // (entries of [value, square-or-key]) exactly as the original, including
 // reading past the start of a list when it runs out of options.
-import { BOARD, L2, L3, L4, V, M, P, u8 } from './core.js';
+import { BOARD, L2, L3, L4, V, M, P, u8, TROLL_VALUE } from './core.js';
 import { isNull } from './spells.js';
 
 export const AiMixin = {
@@ -9,13 +9,16 @@ export const AiMixin = {
   r_C63D() { return (this.r_C703(this.rw(V.P12)) & 0xFF) === 0x10; },
 
   // $C67A: attraction of the enemy piece on ($AC12) as seen from ($AC14)
+  // how much the computer values piece `id` ($C6D4, indexed from id 2)
+  pieceValue(id) { return this.isTroll(id) ? TROLL_VALUE : this.m[0xC6D4 + u8(id - 2)]; },
+
   r_C67A() {
     const m = this.m, t = this.rw(V.P12);
     const id = m[t];
     if (id === 0) return 0;
     if (m[t + L2] === 4) return 0;
     if ((m[t + L3] & 7) === m[V.PLAYER]) return 0;
-    m[0xC679] = m[0xC6D4 + u8(id - 2)];
+    m[0xC679] = this.pieceValue(id);
     const e = this.distance(t, this.rw(V.P14));
     const a = u8(u8(m[0xC679] + 4 + m[0xCC55]) - e);
     return (a & 0x80) ? 0 : a;
@@ -76,7 +79,8 @@ export const AiMixin = {
       const c = m[BOARD + i];
       if (c === 0 || P(c, 0x26)) continue;
       if ((m[BOARD + i + L3] & 7) !== m[0xC858]) continue;
-      m[h] = u8(m[h] + (m[0xC6D4 + c] >> 2));
+      // (two entries along the table, as in the original)
+      m[h] = u8(m[h] + ((this.isTroll(c) ? TROLL_VALUE : m[0xC6D4 + c]) >> 2));
     }
     m[h] = u8(m[h] + m[0xCC55]);
     this.ww(V.CD86, h + 2);

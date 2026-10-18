@@ -18,6 +18,19 @@ export const L4 = 0x281;              // object underneath (wizard in castle/woo
 export const L5 = 0x321;              // object underneath (corpse under creature)
 export const RECORDS = 0xE3E0;        // object record pointer table, id 1..
 
+// The Troll (custom rule): the original has a complete Troll record and
+// graphics that nothing uses, and no free id or spell number for it. It gets
+// id and spell number $C1: the original's signed comparisons ($C1 - K is
+// negative for every K from $10 to $41 it compares ids and spells with) then
+// treat it as a creature that walks, can't be ridden and isn't undead. The
+// tables indexed by id don't reach $C1, so those lookups go through
+// record(), r_BAFB(), r_92F9() and pieceValue() instead.
+export const TROLL = 0xC1;
+export const TROLL_RECORD = 0xE70D;   // name, stats and frames, as other records
+export const TROLL_SPELL = 0xA700;    // its 7-byte spell entry, written by applyRules()
+                                      // (into the assembler's leftover labels)
+export const TROLL_VALUE = 10;        // how much the computer values it ($C6D4)
+
 export const V = {                    // game variables (original addresses)
   PLAYER: 0xAC0E, NWIZ: 0xAC0F, P12: 0xAC12, P14: 0xAC14, WFLAGS: 0xAC16,
   AIFLAG: 0xAC1E, CPU: 0xAC26, ISCPU: 0xAC2E, DEADCOUNT: 0xAC34, ROUND: 0x7D03,
@@ -76,6 +89,11 @@ export class Chaos {
   }
 
   // ---- memory access ---------------------------------------------------------
+  // the record (name, stats, frames) of object `id` ($E3E0 table)
+  record(id) {
+    return this.isTroll(id) ? TROLL_RECORD : this.rw(RECORDS + ((id - 1) * 2 & 0xFF));
+  }
+  isTroll(id) { return id === TROLL && !!this.rules.troll; }
   rw(a) { return this.m[a] | (this.m[(a + 1) & 0xFFFF] << 8); }
   ww(a, v) { this.m[a] = v & 0xFF; this.m[(a + 1) & 0xFFFF] = (v >> 8) & 0xFF; }
 
@@ -256,11 +274,13 @@ export class Chaos {
   }
   // $BAFB: print name/message A from the table at $CDD3; returns new C
   r_BAFB(a, b, c) {
+    if (this.isTroll(a)) return this.r_BAEE(TROLL_RECORD, 5, b, c);
     const p = 0xCDD3 + (a & 0xFF) * 4;
     return this.r_BAEE(this.rw(p), this.m[p + 2], b, c);
   }
   // The text of message A from the table at $CDD3 (wizard names are $29 + seat)
   messageText(a) {
+    if (this.isTroll(a)) return 'TROLL';
     const p = 0xCDD3 + (a & 0xFF) * 4, at = this.rw(p);
     return String.fromCharCode(...this.m.subarray(at, at + this.m[p + 2])).trim();
   }
@@ -334,7 +354,7 @@ export class Chaos {
         if (isBlank) this.pendingBlank[i] = 0;
         continue;
       }
-      const rec = this.rw(RECORDS + (id - 1) * 2);
+      const rec = this.record(id);
       m[a + L1] = m[rec + 0x16];
       let f = m[a + L2] + 1;
       if (f === (this.noAnim ? 1 : 4)) f = 0;

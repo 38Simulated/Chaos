@@ -15,6 +15,7 @@ Object.assign(Chaos.prototype, SetupMixin, SpellsMixin, MovementMixin, UiMixin, 
 Chaos.prototype.run = async function (seed, game = 0) {
   this.rng = this.fixedRng || new Rng((seed + Math.imul(game, 0x9E3779B9)) >>> 0);
   this.onEvent({ type: 'newgame', game });
+  this.applyRules();
   await this.r_89F9();
   this.onEvent({ type: 'ended' });
 };
