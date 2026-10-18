@@ -191,6 +191,40 @@ class ReplayTests(TestCase):
         self.assertEqual((private.public_replay, public.public_replay), (False, True))
 
 
+class ArchiveTests(TestCase):
+    """Finished public games, listed for anyone to watch again."""
+    def finished(self, name, public, minutes_ago=0):
+        game = create_game(Client(), name)
+        Game.objects.filter(pk=game.pk).update(
+            status=Game.FINISHED, survivors=[0], public_watch=public,
+            last_move=timezone.now() - timedelta(minutes=minutes_ago))
+        return Game.objects.get(pk=game.pk)
+
+    def test_lists_finished_public_games_latest_first(self):
+        old = self.finished('Morgana', True, minutes_ago=60)
+        new = self.finished('Gandalf', True)
+        private = self.finished('Nimue', False)
+        playing = create_game(Client(), 'Saruman')
+        Game.objects.filter(pk=playing.pk).update(status=Game.PLAYING, public_watch=True)
+        page = Client().get('/archive/')
+        content = page.content.decode()
+        self.assertLess(content.index('Gandalf'), content.index('Morgana'))
+        self.assertContains(page, f'/w/{new.watch_id}/replay/')
+        for hidden in ('Nimue', 'Saruman', old.code, new.code):
+            self.assertNotContains(page, hidden)
+        self.assertEqual(Client().get(f'/w/{old.watch_id}/replay.json').status_code, 200)
+
+    def test_search_by_player(self):
+        self.finished('Morgana', True)
+        self.finished('Gandalf', True)
+        page = Client().get('/archive/', {'q': 'morg'})
+        self.assertContains(page, 'Morgana')
+        self.assertNotContains(page, 'Gandalf')
+
+    def test_linked_from_the_front_page(self):
+        self.assertContains(Client().get('/'), 'href="/archive/"')
+
+
 class AdminTests(TestCase):
     """Admins (the Admins group, given in the Django admin) see every game
     and can watch any replay."""

@@ -232,3 +232,7 @@ button:disabled:hover { background: transparent; color: var(--accent); }
 .allgames .search { display: flex; gap: .5rem; align-items: center; }
 .allgames .search input { flex: 1; min-width: 0; }
 .allgames .pages { justify-content: center; margin-top: .5rem; }
+
+/* a card's heading with a link on the right */
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.card-head a { font-size: .9rem; }

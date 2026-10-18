@@ -1,0 +1,41 @@
+{% extends "game/base.html" %}
+{% load static %}
+{% block title %}Archived games - Chaos Online{% endblock %}
+{% block body %}
+{% include "game/_userbar.html" %}
+<main class="lobby">
+  <h1 class="title"><a href="{% url 'index' %}"><img src="{% static 'game/img/logo.png' %}" alt="CHAOS" width="960" height="272"></a></h1>
+  <p class="subtitle">Archived games</p>
+  <section class="card mygames live allgames" id="games">
+    <div class="card-head"><h2>Public games, latest first</h2><a href="{% url 'index' %}#live">Watch live</a></div>
+    <form class="search" method="get">
+      <input name="q" value="{{ query }}" placeholder="Player name" aria-label="Player name">
+      <button type="submit" class="small">Search</button>
+      {% if query %}<a href="{% url 'archive' %}">Clear</a>{% endif %}
+    </form>
+    {% if rows %}
+    <ul>
+      {% for row in rows %}
+      <li>
+        <a href="{% url 'watch_replay' row.game.watch_id %}">Watch replay</a>
+        <span>{% for p in row.players %}{{ p.name }}{% if p.registered %}<span class="reg" title="Registered player">&#10003;</span>{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</span>
+        <span class="state">{{ row.state }}</span>
+        {% if row.game.rules %}<span class="hint" title="{{ row.game.rule_list|join:'. ' }}">Custom rules</span>{% endif %}
+        <span class="hint">{{ row.last|timesince }} ago</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="hint">{% if query %}No public games with a player called &ldquo;{{ query }}&rdquo;.{% else %}No public games have finished yet.{% endif %}</p>
+    {% endif %}
+    {% if page.has_other_pages %}
+    <nav class="filters pages">
+      {% if page.has_previous %}<a href="?q={{ query|urlencode }}&amp;page={{ page.previous_page_number }}">&larr; Newer</a>{% endif %}
+      <span class="hint">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}<a href="?q={{ query|urlencode }}&amp;page={{ page.next_page_number }}">Older &rarr;</a>{% endif %}
+    </nav>
+    {% endif %}
+    <p class="hint">Games are listed here when their host let anyone watch them live.</p>
+  </section>
+</main>
+{% endblock %}

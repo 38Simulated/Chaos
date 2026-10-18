@@ -51,7 +51,7 @@
   </div>
   {% if not join_code %}
   <section class="card mygames live" id="live">
-    <h2>Watch live</h2>
+    <div class="card-head"><h2>Watch live</h2><a href="{% url 'archive' %}">Archived games</a></div>
     {% if live_games %}
     <ul>
       {% for row in live_games %}

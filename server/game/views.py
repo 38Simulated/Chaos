@@ -156,6 +156,21 @@ def all_games(request):
         'rows': rows, 'page': page, 'show': show, 'filters': ALL_GAMES_FILTERS, 'query': query})
 
 
+def archive(request):
+    """Finished public games (those anyone could watch live), latest first,
+    to watch again. Links use the watch id, never the game code."""
+    query = (request.GET.get('q') or '').strip()
+    games = (Game.objects.filter(public_watch=True, status=Game.FINISHED)
+             .prefetch_related('players__user'))
+    if query:
+        games = games.filter(players__name__icontains=query, players__seat__gte=0).distinct()
+    games = games.order_by(F('last_move').desc(nulls_last=True), '-created')
+    page = Paginator(games, 30).get_page(request.GET.get('page'))
+    rows = [{'game': g, 'state': g.state_for()[0], 'last': g.last_move or g.created,
+             'players': [p for p in g.players.all() if p.seat >= 0]} for g in page]
+    return render(request, 'game/archive.html', {'rows': rows, 'page': page, 'query': query})
+
+
 def index(request):
     context = {'error': request.GET.get('error'), 'live_games': _live_games()}
     if _account(request):
@@ -294,7 +309,7 @@ def robots_txt(request):
     return HttpResponse('\n'.join(lines) + '\n', content_type='text/plain')
 
 
-SITEMAP_PAGES = ['index', 'help', 'mechanics', 'privacy']
+SITEMAP_PAGES = ['index', 'archive', 'help', 'mechanics', 'privacy']
 
 
 def sitemap_xml(request):
